@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/zakladne">
+        <file>Application_Icon.png</file>
+        <file>open_icon.png</file>
+        <file>save_icon.png</file>
+    </qresource>
+</RCC>
