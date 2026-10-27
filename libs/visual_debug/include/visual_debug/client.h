@@ -1,29 +1,38 @@
-#ifndef VISUAL_DEBUG_H
-#define VISUAL_DEBUG_H
+#pragma once
 
-#ifndef VISUAL_DEBUG_GLOBAL_H
-#define VISUAL_DEBUG_GLOBAL_H
+#include "visual_debug/endpoint.h"
+#include "visual_debug/image_sender.h"
 
-#include <QtCore/qglobal.h>
+#include <chrono>
+#include <memory>
+#include <string>
 
-#if defined(VISUAL_DEBUG_LIBRARY)
-#  define VISUAL_DEBUGSHARED_EXPORT Q_DECL_EXPORT
-#else
-#  define VISUAL_DEBUGSHARED_EXPORT Q_DECL_IMPORT
-#endif
+namespace visual_debug {
 
-#endif // VISUAL_DEBUG_GLOBAL_H
-
-enum TYP_UDAJOV {
-    TYP_IMAGE = 1
+struct ClientOptions {
+    std::string endpoint{kDefaultEndpoint};
+    // Longest wait for a reply to a small image; each MiB of pixels adds 10 ms.
+    std::chrono::milliseconds replyTimeout{500};
+    // After a failure, sends return ViewerUnavailable immediately for this long.
+    std::chrono::milliseconds retryInterval{1000};
 };
 
-#include <zmq.hpp>
-#include <opencv2/core/core.hpp>
-#include <iostream>
+// Sends images to a viewer over ZeroMQ REQ/REP. With no viewer running, the host application is blocked
+// once for replyTimeout, not on every send; once a viewer appears, sending recovers by itself.
+// Owns its socket for its lifetime. Not thread-safe: use one Client per thread, or sendImage().
+class Client final : public ImageSender {
+public:
+    explicit Client(ClientOptions options = {});
+    ~Client() override;
 
-VISUAL_DEBUGSHARED_EXPORT void send_image(cv::Mat image_to_send, std::string picture_name);
-void fill_vector(std::vector<unsigned char> &my_vector,std::string input);
-void intToBytes(std::vector<unsigned char> &my_vector, int my_int);
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
 
-#endif // VISUAL_DEBUG_H
+    SendResult send(const cv::Mat& image, std::string_view name) noexcept override;
+
+private:
+    class Impl; // keeps ZeroMQ out of host applications' headers
+    std::unique_ptr<Impl> m_impl;
+};
+
+} // namespace visual_debug
