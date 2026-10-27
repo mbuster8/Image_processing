@@ -10,7 +10,7 @@ floating point.
 visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer is running
 ```
 
-![The viewer showing the stages of pipeline_demo, with the pixel readout in the status bar](docs/images/viewer.png)
+![The viewer showing the ten stages of pipeline_demo, newest at the top of the thumbnail list](docs/images/viewer.png)
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
 brought it back: ported to Qt 6 and OpenCV 5, restructured, tested and documented. What changed, and why,
@@ -52,6 +52,69 @@ build/debug/examples/pipeline_demo/pipeline_demo
 `Listening on tcp://127.0.0.1:7139` before running the last command. That command runs an OpenCV pipeline
 and sends ten images to the viewer: colour, alpha, greyscale, signed 16-bit, 32- and 64-bit floating
 point, a cropped region and 16-bit colour. Hover over them to see the original values.
+
+## Everyday commands
+
+Run these from the repository root. The [build guide](docs/build-guide.md) and the
+[user guide](docs/user-guide.md) explain each one in full.
+
+### Configure, build and test
+
+```sh
+cmake --preset debug                    # configure; once, or after changing a CMakeLists.txt
+cmake --build --preset debug            # build everything into build/debug
+ctest --preset debug                    # all 139 tests, about 6 seconds
+ctest --preset debug -R ClientServer    # only the tests whose name matches
+```
+
+Swap `debug` for `release`, or for `asan` to run the same tests under AddressSanitizer and
+UndefinedBehaviorSanitizer.
+
+### Run the programs
+
+```sh
+# The viewer. Double-clicking image_processing.app in Finder works too.
+open build/debug/apps/image_processing/image_processing.app
+
+# An OpenCV pipeline that sends each of its ten stages; give it a path to use your own image
+build/debug/examples/pipeline_demo/pipeline_demo
+
+# The demo sender: click Open… to pick an image, then Send image
+open build/debug/apps/client/client.app
+
+# The smallest sender: three thresholded images
+build/debug/examples/minimal_sender/minimal_sender
+```
+
+Senders started before the viewer's status bar says `Listening on tcp://127.0.0.1:7139` get
+`ViewerUnavailable` and carry on; later sends reach the viewer once it is up.
+
+In the viewer, the mouse wheel zooms, dragging pans, a double-click fits the image to the window again,
+and hovering shows the original value of the pixel under the cursor. **File → Open…** adds an image file
+to the history and **File → Save As…** saves the displayed image.
+
+```sh
+# A second viewer on another port, and a sender aimed at it
+open -n build/debug/apps/image_processing/image_processing.app --args --endpoint tcp://127.0.0.1:7140
+build/debug/examples/pipeline_demo/pipeline_demo --endpoint tcp://127.0.0.1:7140
+
+# Run the viewer in the terminal to see its options, or its log as it runs
+build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_processing --help
+```
+
+### Build, test and debug in Qt Creator
+
+1. **File → Open File or Project…** and choose the top-level `CMakeLists.txt`.
+2. Tick the **Debug** preset and click **Configure Project**. Qt Creator uses the same `build/debug` folder
+   as the command line, so either can build it.
+3. **⌘B** builds. Pick `image_processing` in the run target selector (the computer icon at the bottom left)
+   and press **⌘R** to run it.
+4. **Tools → Tests → Run All Tests** runs every test; the results appear in the **Test Results** pane.
+   Unlike `ctest`, Qt Creator runs all the tests of one test program in a single process.
+5. Click in the margin next to a line to set a breakpoint and press **⌘Y** to debug with LLDB. The first
+   time, macOS may ask for your password to let the debugger attach.
+
+![Qt Creator after Run All Tests: 139 passes, grouped by test suite](docs/images/qt-creator-tests.png)
 
 ## Documentation
 

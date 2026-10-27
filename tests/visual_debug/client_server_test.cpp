@@ -50,6 +50,22 @@ private:
     mutable std::atomic<int> m_count{0};
 };
 
+// Makes an allocator cv::Mat's default for one scope, then restores the previous default, even when a failed
+// assertion ends the test early. setDefaultAllocator(nullptr) is no reset: it leaves cv::Mat without an
+// allocator, so the next allocation anywhere in the process dereferences null.
+class DefaultAllocatorScope {
+public:
+    explicit DefaultAllocatorScope(cv::MatAllocator* allocator) : m_previous(cv::Mat::getDefaultAllocator()) {
+        cv::Mat::setDefaultAllocator(allocator);
+    }
+    ~DefaultAllocatorScope() { cv::Mat::setDefaultAllocator(m_previous); }
+    DefaultAllocatorScope(const DefaultAllocatorScope&) = delete;
+    DefaultAllocatorScope& operator=(const DefaultAllocatorScope&) = delete;
+
+private:
+    cv::MatAllocator* m_previous;
+};
+
 testing::AssertionResult started(Server& server) {
     if (const auto error = server.start()) {
         return testing::AssertionFailure() << error->reason;
@@ -254,12 +270,11 @@ TEST(ClientServer, DoesNotCopyImagesWhileViewerIsUnavailable) {
     const cv::Mat region = whole(cv::Rect(1, 1, 32, 32)); // not continuous: encoding would copy it
     Client client({.endpoint = unusedEndpoint(), .replyTimeout = 50ms, .retryInterval = 10s});
     CountingAllocator allocator;
-    cv::Mat::setDefaultAllocator(&allocator);
+    const DefaultAllocatorScope countAllocations(&allocator);
 
     const auto first = client.send(region, "x");  // waits for a connection, then starts the back-off
     const auto second = client.send(region, "x"); // inside the back-off
 
-    cv::Mat::setDefaultAllocator(nullptr);
     EXPECT_EQ(first, SendResult::ViewerUnavailable);
     EXPECT_EQ(second, SendResult::ViewerUnavailable);
     EXPECT_EQ(allocator.count(), 0);

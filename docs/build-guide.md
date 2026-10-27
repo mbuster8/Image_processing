@@ -132,8 +132,10 @@ by hand. If a menu has moved in your version, the presets above still work from 
 3. Build with **Build → Build All Projects** (⌘B).
 4. Run: pick `image_processing` in the run target selector (the computer icon at the bottom left) and
    press **Run** (⌘R). Pick `pipeline_demo` and run it to send it some images.
-5. Tests: open the **Tests** pane (**View → Output → Test Results**), then **Tools → Tests → Run All
-   Tests**. Qt Creator finds the GoogleTest cases through CTest.
+5. Tests: open the **Test Results** pane (**View → Output → Test Results**), then **Tools → Tests → Run
+   All Tests**. Qt Creator runs each GoogleTest program itself and lists the results by test suite. Unlike
+   `ctest`, it runs all the tests of one program in a single process, so a test that leaves global state
+   behind (or crashes) affects the tests after it, and the pane reports the program as crashed.
 6. Debugging: click in the margin of `apps/image_processing/image_view.cpp` next to the first line of
    `ImageView::wheelEvent` to set a breakpoint, start with **Debug → Start Debugging** (⌘Y), and scroll
    the mouse wheel over an image in the viewer. Qt Creator stops at the breakpoint with LLDB.
