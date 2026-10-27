@@ -1,42 +1,40 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
+
+#include "visual_debug/image_sender.h"
 
 #include <QMainWindow>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <visual_debug.h>
-#include <QtGui>
-#include <QtCore>
-#include <zmq.hpp>
-#include <iostream>
-#include <QMutex>
-#include <QDebug>
+#include <QPixmap>
+#include <QString>
 
-using namespace std;
+#include <opencv2/core/mat.hpp>
+
+#include <memory>
 
 namespace Ui {
-    class MainWindow;
+class MainWindow;
 }
 
-class MainWindow : public QMainWindow{
+// A minimal host application: open an image, send it to the viewer, see the result. It depends only on the
+// ImageSender interface, so it never knows which transport carries the image.
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
-    void send(cv::Mat image_to_send);
-    cv::Mat scale(const cv::Mat &image);
-
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    explicit MainWindow(visual_debug::ImageSender& sender, QWidget* parent = nullptr);
+    ~MainWindow() override;
 
-private slots:
-    void on_btn_open_clicked();
-    void on_btn_send_image_clicked();
+protected:
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
-    Ui::MainWindow *ui;
-    cv::Mat actual_image, original_image;
-    int counter;
-};
+    void openFile();
+    void sendImage();
+    void showPreview();
 
-#endif // MAINWINDOW_H
+    std::unique_ptr<Ui::MainWindow> m_ui;
+    visual_debug::ImageSender& m_sender;
+    cv::Mat m_image; // as read, sent unchanged
+    QString m_fileName;
+    QPixmap m_preview;
+    int m_sentCount = 0;
+};

@@ -1,49 +1,67 @@
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
+#include "main_window.h"
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
-    ui->setupUi(this);
-    counter = 0;
+#include "image_file.h"
+#include "qimage_conversion.h"
+#include "ui_main_window.h"
+
+#include "viewer_core/display_converter.h"
+
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QStatusBar>
+
+#include <string>
+#include <utility>
+#include <variant>
+
+MainWindow::MainWindow(visual_debug::ImageSender& sender, QWidget* parent)
+    : QMainWindow(parent), m_ui(std::make_unique<Ui::MainWindow>()), m_sender(sender) {
+    m_ui->setupUi(this);
+    connect(m_ui->openButton, &QPushButton::clicked, this, &MainWindow::openFile);
+    connect(m_ui->sendButton, &QPushButton::clicked, this, &MainWindow::sendImage);
 }
 
-MainWindow::~MainWindow(){
-    delete ui;
+MainWindow::~MainWindow() = default;
+
+void MainWindow::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+    showPreview();
 }
 
-cv::Mat MainWindow::scale(const cv::Mat &image){
-    double min = 0, max = 1;
-    cv::minMaxLoc(image, &min, &max);
-    cv::Mat res;
-    cv::Mat tmp = ((image - min) / (max - min)) * 255;
-    tmp.convertTo(res, CV_8UC1);
-    return res;
+void MainWindow::openFile() {
+    const QString path = qt_common::chooseImageFile(this);
+    if (path.isEmpty()) {
+        return;
+    }
+    const QString fileName = QFileInfo(path).fileName();
+    auto result = qt_common::readImageFile(path);
+    if (const auto* error = std::get_if<QString>(&result)) {
+        statusBar()->showMessage(tr("Cannot open %1: %2").arg(fileName, *error));
+        return;
+    }
+    m_image = std::get<cv::Mat>(std::move(result));
+    m_fileName = fileName;
+    m_preview = QPixmap::fromImage(qt_common::toQImage(viewer_core::toDisplayImage(m_image)));
+    m_ui->sendButton->setEnabled(true);
+    showPreview();
+    statusBar()->showMessage(tr("Opened %1").arg(fileName));
 }
 
-void MainWindow::on_btn_open_clicked(){
-
-    QString file_name = QFileDialog::getOpenFileName(this,tr("Open File"),"/home",
-    tr("Image Files(*.png *.bmp *.jpg *.jpeg *.gif *.tiff *.ppm *.pgm *.pbm *.xbm *.xpm)"));
-    //QFile file(file_name);
-
-    if (file_name.size()<1) return; //if no file opened, nothing is going to be processed
-    actual_image = cv::imread(file_name.toAscii().data(),CV_LOAD_IMAGE_UNCHANGED);  
-    original_image = actual_image.clone();
-
-    actual_image = scale(actual_image);
-
-    if (actual_image.channels() == 3)cv::cvtColor(actual_image,actual_image,CV_BGR2RGB);
-    else cv::cvtColor(actual_image,actual_image,CV_GRAY2RGB);
-
-    QImage q_image = QImage((const unsigned char*)(actual_image.data),actual_image.cols,actual_image.rows,actual_image.step[0],QImage::Format_RGB888);
-    ui->lbl_obrazok->setPixmap(QPixmap::fromImage(q_image).scaled(ui->lbl_obrazok->width(),ui->lbl_obrazok->height(),Qt::KeepAspectRatio));
+// Sends the image as read, not the preview, so the viewer shows its original depth and values.
+void MainWindow::sendImage() {
+    const std::string name = QStringLiteral("%1 #%2").arg(m_fileName).arg(++m_sentCount).toStdString();
+    // Waits for the connection and the reply: about a second at most for a small image, longer for a large
+    // one, because the reply deadline grows with the image's size.
+    QGuiApplication::setOverrideCursor(Qt::WaitCursor);
+    const visual_debug::SendResult result = m_sender.send(m_image, name);
+    QGuiApplication::restoreOverrideCursor();
+    const std::string_view text = visual_debug::toString(result);
+    statusBar()->showMessage(QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())));
 }
 
-void MainWindow::on_btn_send_image_clicked(){
-    for (int i = 1;i <=1;i++){
-        counter++;
-        QString number = QString::number(counter);
-        std::string picture_name("môj obrázok č.");
-        picture_name.append(number.toStdString());
-        send_image(original_image,picture_name);
+void MainWindow::showPreview() {
+    if (!m_preview.isNull()) {
+        m_ui->previewLabel->setPixmap(
+            m_preview.scaled(m_ui->previewLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
 }
