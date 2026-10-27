@@ -1,61 +1,50 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
+
+#include "qt_image_sink.h"
+
+#include "viewer_core/image_history.h"
+#include "visual_debug/server.h"
 
 #include <QMainWindow>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <memory>
+#include <optional>
+#include <string>
 
-#include <QtGui>
-#include <QtCore>
-#include <QMutex>
-#include "My_label.h"
-#include "mythread.h"
-
-using namespace std;
+class ImageView;
+class QLabel;
+class ThumbnailPanel;
 
 namespace Ui {
-    class MainWindow;
+class MainWindow;
 }
 
-class MainWindow : public QMainWindow{
+// The viewer: received and opened images go into one history, shown as thumbnails and in a zoomable view,
+// with the original value of the pixel under the cursor in the status bar.
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
-    public:
-        explicit MainWindow(QWidget *parent = 0);
-        ~MainWindow();
-    void resizeEvent(QResizeEvent *);
-    void closeEvent(QCloseEvent *);
-    void display_on_label();
-    cv::Mat scale(const cv::Mat& image);
-
-    signals:
-    void picture_changed(QImage image, int picture_ID);
-
-    private slots:
-        void reload_picture();
-        void Mouse_position_Slot(int pos_x, int pos_y);
-        void receive_new_image(QString name, cv::Mat received_mat);
-        void on_actionOpen_triggered();
+public:
+    explicit MainWindow(visual_debug::ServerOptions serverOptions, QWidget* parent = nullptr);
+    ~MainWindow() override;
 
 private:
-        Ui::MainWindow *ui;
-        My_label *my_label;
-        QLabel *des;
-        MyThread *my_thread_1;
-        QVBoxLayout *left_panel_label_layout;
-        QMutex mutex;
+    void startServer(bool allowRemote);
+    void onImageReceived(const visual_debug::ImageMessage& message);
+    bool addImage(std::string name, cv::Mat image);
+    void showImage(viewer_core::ImageId id);
+    void showPixel(int x, int y);
+    void openFile();
+    void saveDisplayedImage();
 
-        QList <cv::Mat> Qlist_of_pictures;
-        QList <QLabel*> Qlist_of_descriptions;
-        QList <My_label*> Qlist_of_labels;
-
-        int actual_image_ID;
-        int max_num_of_pictures;
-        int picture_counter;
-        int label_description_height;
-        int representative_label_height, representative_label_width;
+    std::unique_ptr<Ui::MainWindow> m_ui;
+    viewer_core::ImageHistory m_history;
+    // Declared before the server, so the server's thread has stopped before the sink is destroyed.
+    QtImageSink m_sink;
+    visual_debug::Server m_server;
+    ThumbnailPanel* m_thumbnails = nullptr;
+    ImageView* m_imageView = nullptr;
+    QLabel* m_pixelLabel = nullptr;
+    QLabel* m_serverLabel = nullptr;
+    std::optional<viewer_core::ImageId> m_currentId;
 };
-
-#endif // MAINWINDOW_H

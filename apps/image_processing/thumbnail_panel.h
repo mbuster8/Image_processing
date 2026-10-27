@@ -1,33 +1,23 @@
-#ifndef MY_LABEL_H
-#define MY_LABEL_H
+#pragma once
 
-#include <QtGui/QLabel>
-#include <QtGui/QWidget>
-#include <QObject>
-#include <QMouseEvent>
-#include <QEvent>
-#include <QImage>
+#include "viewer_core/image_history.h"
 
-class My_label : public QLabel{
+#include <QListWidget>
+#include <QSize>
+
+// The history down the side of the viewer: newest first, each image as a thumbnail with its name and summary.
+class ThumbnailPanel : public QListWidget {
     Q_OBJECT
 
-    public:
-         My_label(int picture_number, QWidget * parent = 0);
-        ~My_label();
-        int get_identity();
+public:
+    static constexpr QSize kThumbnailSize{150, 90};
 
-    signals:
-        void clicked();
+    explicit ThumbnailPanel(QWidget* parent = nullptr);
 
-    protected:
-        void mousePressEvent ( QMouseEvent *) ;
+    // Adds the image at the top and selects it.
+    void addImage(const viewer_core::ReceivedImage& image);
+    void removeImage(viewer_core::ImageId id);
 
-    private:
-        int identity;
-
-        void set_identity(int picture_number);
-public slots:
-        void reload_picture(QImage new_image,int actual_picture_ID);
-
+signals:
+    void imageSelected(viewer_core::ImageId id);
 };
-#endif // MY_LABEL_H

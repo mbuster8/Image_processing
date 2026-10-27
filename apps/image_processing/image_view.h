@@ -1,35 +1,43 @@
-#ifndef MY_MAIN_QLABEL_H
-#define MY_MAIN_QLABEL_H
+#pragma once
 
-#include <QLabel>
-#include <QMouseEvent>
-#include <QEvent>
-#include <QDebug>
-#include <opencv2/core/core.hpp>
+#include "viewer_core/viewport.h"
 
-class my_main_qlabel : public QLabel{
+#include <QImage>
+#include <QPointF>
+#include <QWidget>
+
+#include <optional>
+
+// Shows one image: wheel to zoom at the cursor, drag to pan, double-click to fit. Reports the image pixel
+// under the cursor, so the window can show its original values.
+class ImageView : public QWidget {
     Q_OBJECT
+
 public:
-    explicit my_main_qlabel(QWidget *parent = 0);
+    explicit ImageView(QWidget* parent = nullptr);
 
-    void mouseMoveEvent(QMouseEvent *ev);
-    void wheelEvent(QWheelEvent *event);
-    void zoom(double zoomfactor, int mouse_pos_x, int mouse_pos_y);
+    void setImage(const QImage& image); // shown fitted to the view
+    void clear();
 
-    QPixmap original_pixmap;  //we store here maximum number of pixels from the biggest possible image
-    double scaleFactor_x, scalefactor_y;
-    double zoom_of_picture;
-    int offset_x;
-    int offset_y;
+signals:
+    void pixelHovered(int x, int y);
+    void hoverLeft();
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
 
 private:
-    
-signals:
-    void Mouse_position(int pos_x, int pos_y);
-    void zoomed();
-    
-public slots:
-    
-};
+    void reportPixelAt(QPointF viewPoint);
 
-#endif // MY_MAIN_QLABEL_H
+    QImage m_image;
+    viewer_core::Viewport m_viewport;
+    std::optional<QPointF> m_lastDragPosition;
+    std::optional<QPointF> m_hoverPosition; // while the cursor is over the view
+};
