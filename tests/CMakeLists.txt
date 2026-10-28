@@ -1,12 +1,17 @@
-# One GoogleTest executable per area. Each test runs in its own process, and the timeout turns a hung socket
-# into a failure instead of a stall. Callers pass GTest::gtest_main, or GTest::gtest with their own main().
+# One GoogleTest executable per area. Each test case runs in its own process, and the timeout turns a hung
+# socket into a failure instead of a stall. Each program also runs once whole, as IDEs such as Qt Creator run
+# it: state one test leaves behind breaks the next only when they share a process. Discovery runs the new
+# binary once at build time; antivirus scanning can make that first launch slow, hence the longer timeout.
+# Callers pass GTest::gtest_main, or GTest::gtest with their own main().
 function(image_processing_add_test_executable target)
     cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;LIBRARIES")
     add_executable(${target} ${ARG_SOURCES})
     target_link_libraries(${target} PRIVATE ${ARG_LIBRARIES})
     image_processing_set_warnings(${target})
     image_processing_add_sanitizer_defaults(${target})
-    gtest_discover_tests(${target} PROPERTIES TIMEOUT 60)
+    gtest_discover_tests(${target} DISCOVERY_TIMEOUT 30 PROPERTIES TIMEOUT 60)
+    add_test(NAME "${target} (whole program)" COMMAND ${target})
+    set_tests_properties("${target} (whole program)" PROPERTIES LABELS whole TIMEOUT 120)
 endfunction()
 
 image_processing_add_test_executable(visual_debug_tests
