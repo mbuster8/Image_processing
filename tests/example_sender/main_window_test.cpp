@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QLineEdit>
+#include <QMenu>
 #include <QPalette>
 #include <QPoint>
 #include <QSettings>
@@ -96,6 +97,16 @@ TEST(ExampleSenderWindow, TitleNamesTheApp) {
     MainWindow window(senders.factory());
 
     EXPECT_EQ(window.windowTitle(), QStringLiteral("Visual Debug Example Sender"));
+}
+
+TEST(ExampleSenderWindow, HelpMenuOffersAbout) {
+    FakeSenders senders;
+    MainWindow window(senders.factory());
+
+    const auto* help = window.findChild<QMenu*>(QStringLiteral("menuHelp"));
+    ASSERT_NE(help, nullptr);
+    ASSERT_FALSE(help->actions().isEmpty());
+    EXPECT_EQ(help->actions().front()->menuRole(), QAction::AboutRole);
 }
 
 TEST(ExampleSenderWindow, StartsFromTheDefaultEndpoint) {

@@ -54,6 +54,7 @@ if(IMAGE_PROCESSING_BUILD_QT_APPS)
     image_processing_add_test_executable(qt_common_tests
         SOURCES
             qt_common/test_main.cpp
+            qt_common/about_test.cpp
             qt_common/appearance_test.cpp
             qt_common/image_file_test.cpp
             qt_common/outline_icons_test.cpp

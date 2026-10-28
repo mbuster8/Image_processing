@@ -1,6 +1,8 @@
 #include "main_window.h"
 
+#include "about.h"
 #include "appearance.h"
+#include "application_identity.h"
 #include "controls.h"
 #include "image_file.h"
 #include "outline_icons.h"
@@ -12,6 +14,7 @@
 #include "visual_debug/endpoint.h"
 
 #include <QAction>
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -109,6 +112,8 @@ MainWindow::MainWindow(SenderFactory makeSender, QWidget* parent)
     if (qt_common::addAppearanceMenu(m_ui->menuView) == nullptr) {
         m_ui->menuView->menuAction()->setVisible(false);
     }
+    qt_common::addHelpMenu(menuBar(),
+                           QCoreApplication::translate("About", qt_common::kExampleSenderDescription));
 }
 
 MainWindow::~MainWindow() = default;

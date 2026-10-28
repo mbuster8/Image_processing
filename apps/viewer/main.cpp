@@ -1,5 +1,5 @@
-#include "application_identity.h"
 #include "appearance.h"
+#include "application_identity.h"
 #include "main_window.h"
 
 #include "visual_debug/endpoint.h"
@@ -18,8 +18,7 @@ int main(int argc, char* argv[]) {
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/application_icon.png")));
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(
-        QStringLiteral("Shows images sent by programs that use the visual_debug library."));
+    parser.setApplicationDescription(QCoreApplication::translate("About", qt_common::kViewerDescription));
     parser.addHelpOption();
     parser.addVersionOption();
     const QCommandLineOption endpointOption(

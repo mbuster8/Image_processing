@@ -1,7 +1,9 @@
 #include "main_window.h"
 
+#include "about.h"
 #include "activity_log_panel.h"
 #include "appearance.h"
+#include "application_identity.h"
 #include "controls.h"
 #include "display_text.h"
 #include "divider_splitter.h"
@@ -204,6 +206,7 @@ MainWindow::MainWindow(visual_debug::ServerOptions serverOptions, const QString&
     m_ui->menuView->addAction(m_ui->actionShowLog);
     connect(m_ui->actionShowLog, &QAction::triggered, this, &MainWindow::setLogOpen);
     qt_common::addAppearanceMenu(m_ui->menuView);
+    qt_common::addHelpMenu(menuBar(), QCoreApplication::translate("About", qt_common::kViewerDescription));
     // Another viewer may have changed the shared setting since.
     const auto showKeepImages = [this] { m_ui->actionKeepImages->setChecked(keepImagesSetting()); };
     showKeepImages();

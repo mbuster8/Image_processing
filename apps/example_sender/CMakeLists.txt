@@ -22,6 +22,7 @@ set_target_properties(visual_debug_example_sender PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
     WIN32_EXECUTABLE ON)
+target_compile_definitions(visual_debug_example_sender PRIVATE IMAGE_PROCESSING_VERSION="${PROJECT_VERSION}")
 target_link_libraries(visual_debug_example_sender PRIVATE example_sender_ui)
 image_processing_set_warnings(visual_debug_example_sender)
 image_processing_add_sanitizer_defaults(visual_debug_example_sender)

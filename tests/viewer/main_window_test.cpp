@@ -168,6 +168,15 @@ TEST(MainWindowTest, TitleShowsTheEndpointBeforeAnyImage) {
     EXPECT_EQ(window->windowTitle(), QString::fromUtf8("Visual Debug Viewer — 127.0.0.1:7141"));
 }
 
+TEST(MainWindowTest, HelpMenuOffersAbout) {
+    const auto window = makeTestWindow(QStringLiteral("tcp://127.0.0.1:7141"));
+
+    const auto* help = window->findChild<QMenu*>(QStringLiteral("menuHelp"));
+    ASSERT_NE(help, nullptr);
+    ASSERT_FALSE(help->actions().isEmpty());
+    EXPECT_EQ(help->actions().front()->menuRole(), QAction::AboutRole);
+}
+
 TEST(MainWindowTest, PixelReadoutHasALeftMargin) {
     const auto window = makeTestWindow();
 
@@ -828,7 +837,7 @@ TEST(MainWindowTest, MenusAreInTheirOrder) {
     const auto window = makeTestWindow();
     EXPECT_EQ(entryTitles(window->menuBar()->actions()),
               (QStringList{QStringLiteral("File"), QStringLiteral("Edit"), QStringLiteral("View"),
-                           QStringLiteral("Server"), QStringLiteral("History")}));
+                           QStringLiteral("Server"), QStringLiteral("History"), QStringLiteral("Help")}));
     QStringList view{QStringLiteral("Show in Sidebar"), QStringLiteral("Sort By"), QStringLiteral("-"),
                      QStringLiteral("Show Log")};
     if (qt_common::canChooseAppearance()) {

@@ -1,4 +1,6 @@
 add_library(qt_common STATIC
+    about.cpp
+    about.h
     appearance.cpp
     appearance.h
     application_identity.cpp
