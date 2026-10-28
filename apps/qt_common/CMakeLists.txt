@@ -1,8 +1,18 @@
 add_library(qt_common STATIC
+    appearance.cpp
+    appearance.h
+    application_identity.cpp
+    application_identity.h
+    controls.cpp
+    controls.h
     image_file.cpp
     image_file.h
+    outline_icons.cpp
+    outline_icons.h
     qimage_conversion.cpp
-    qimage_conversion.h)
+    qimage_conversion.h
+    shades.cpp
+    shades.h)
 
 target_include_directories(qt_common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qt_common
@@ -11,6 +21,7 @@ target_link_libraries(qt_common
         opencv_core
     PRIVATE
         opencv_imgcodecs
+        viewer_core::viewer_core
         visual_debug::visual_debug)
 
 image_processing_set_warnings(qt_common)

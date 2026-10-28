@@ -1,24 +1,33 @@
 #include "image_file.h"
 
+#include "viewer_core/image_formats.h"
 #include "visual_debug/wire_format.h"
 
 #include <QFile>
 #include <QFileDialog>
 #include <QStandardPaths>
+#include <QStringList>
 
 #include <opencv2/imgcodecs.hpp>
 
 #include <exception>
 #include <limits>
+#include <string>
 
 namespace qt_common {
 
+QString imageFileFilter() {
+    QStringList patterns;
+    for (const std::string_view extension : viewer_core::imageExtensions()) {
+        patterns.append(QStringLiteral("*.") + QString::fromStdString(std::string(extension)));
+    }
+    return QFileDialog::tr("Images (%1);;All files (*)").arg(patterns.join(QLatin1Char(' ')));
+}
+
 QString chooseImageFile(QWidget* parent) {
-    return QFileDialog::getOpenFileName(
-        parent, QFileDialog::tr("Open Image"),
-        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
-        QFileDialog::tr(
-            "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.pgm *.ppm *.pbm *.exr *.hdr);;All files (*)"));
+    return QFileDialog::getOpenFileName(parent, QFileDialog::tr("Open Image"),
+                                        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
+                                        imageFileFilter());
 }
 
 std::variant<cv::Mat, QString> readImageFile(const QString& path) {

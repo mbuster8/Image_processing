@@ -1,5 +1,7 @@
 #include "image_file.h"
 
+#include "viewer_core/image_formats.h"
+
 #include <QFile>
 #include <QString>
 #include <QTemporaryDir>
@@ -9,6 +11,7 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include <cstdint>
+#include <string>
 #include <variant>
 
 namespace {
@@ -57,6 +60,17 @@ TEST(ImageFile, ReportsFileThatIsNotAnImage) {
 
     ASSERT_TRUE(std::holds_alternative<QString>(result));
     EXPECT_EQ(std::get<QString>(result), QStringLiteral("not a supported image"));
+}
+
+// File → Open offers the same formats that saving recognises as a name's extension.
+TEST(ImageFile, OpenFilterListsEveryImageFormat) {
+    const QString filter = qt_common::imageFileFilter();
+
+    for (const std::string_view extension : viewer_core::imageExtensions()) {
+        EXPECT_TRUE(filter.contains(QStringLiteral("*.") + QString::fromStdString(std::string(extension))))
+            << extension;
+    }
+    EXPECT_TRUE(filter.endsWith(QStringLiteral(";;All files (*)")));
 }
 
 TEST(ImageFile, ReportsMissingFile) {

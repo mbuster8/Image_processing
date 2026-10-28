@@ -10,6 +10,9 @@ class QWidget;
 
 namespace qt_common {
 
+// The file dialog's filter: every format viewer_core knows, then all files.
+QString imageFileFilter();
+
 // Asks for an image file, starting in the user's Pictures folder. Returns an empty string if cancelled.
 QString chooseImageFile(QWidget* parent);
 
