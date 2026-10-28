@@ -1,12 +1,25 @@
 # Everything except main(), so the Qt helper tests can link it.
 add_library(image_processing_ui STATIC
+    activity_log.cpp
+    activity_log.h
+    data_folder.cpp
+    data_folder.h
+    epoch_time.h
+    image_store.cpp
+    image_store.h
     image_view.cpp
     image_view.h
     main_window.cpp
     main_window.h
     main_window.ui
+    private_files.cpp
+    private_files.h
     qt_image_sink.cpp
     qt_image_sink.h
+    storage_controller.cpp
+    storage_controller.h
+    storage_worker.cpp
+    storage_worker.h
     thumbnail_panel.cpp
     thumbnail_panel.h)
 target_include_directories(image_processing_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

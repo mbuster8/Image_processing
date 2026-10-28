@@ -53,13 +53,17 @@ if(IMAGE_PROCESSING_BUILD_QT_APPS)
     image_processing_add_test_executable(qt_ui_tests
         SOURCES
             image_processing/test_main.cpp
+            image_processing/activity_log_test.cpp
             image_processing/appearance_test.cpp
+            image_processing/data_folder_test.cpp
             image_processing/image_file_test.cpp
+            image_processing/image_store_test.cpp
             image_processing/image_view_test.cpp
             image_processing/outline_icons_test.cpp
             image_processing/qimage_conversion_test.cpp
             image_processing/qt_image_sink_test.cpp
             image_processing/shades_test.cpp
+            image_processing/storage_worker_test.cpp
             image_processing/thumbnail_panel_test.cpp
         LIBRARIES
             image_processing_ui
