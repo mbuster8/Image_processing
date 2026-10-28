@@ -97,6 +97,15 @@ TEST(DisplayConverter, LeavesOriginalUnmodified) {
     EXPECT_EQ(cv::norm(image, before, cv::NORM_INF), 0.0);
 }
 
+// What the history counts for an image's display copy before converting it.
+TEST(DisplayConverter, DisplayBytesAreTheConvertedImages) {
+    for (const int type : {CV_8UC1, CV_16UC3, CV_32FC4, CV_64FC2}) {
+        const cv::Mat image(5, 7, type, cv::Scalar::all(1));
+        const cv::Mat display = toDisplayImage(image);
+        EXPECT_EQ(viewer_core::displayBytes(image), display.total() * display.elemSize()) << type;
+    }
+}
+
 TEST(DisplayConverter, RejectsUnsupportedInput) {
     const int threeDimensions[] = {2, 2, 2};
     const std::vector<std::pair<std::string, cv::Mat>> images = {

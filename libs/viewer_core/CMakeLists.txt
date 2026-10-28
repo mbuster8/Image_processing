@@ -1,7 +1,9 @@
 add_library(viewer_core STATIC
     src/display_converter.cpp
+    src/image_formats.cpp
     src/image_history.cpp
     src/pixel_inspector.cpp
+    src/save_name.cpp
     src/viewport.cpp)
 add_library(viewer_core::viewer_core ALIAS viewer_core)
 

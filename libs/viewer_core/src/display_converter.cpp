@@ -54,7 +54,8 @@ cv::Mat normaliseToEightBit(const cv::Mat& image) {
 
 cv::Mat toDisplayImage(const cv::Mat& image) {
     if (image.empty() || image.dims != 2 || image.depth() > CV_64F || image.channels() > 4) {
-        throw std::invalid_argument("toDisplayImage: expected a 2-D image of depth 8U to 64F with 1-4 channels");
+        throw std::invalid_argument(
+            "toDisplayImage: expected a 2-D image of depth 8U to 64F with 1-4 channels");
     }
 
     const cv::Mat eightBit = image.depth() == CV_8U ? image : normaliseToEightBit(image);
@@ -81,5 +82,7 @@ cv::Mat toDisplayImage(const cv::Mat& image) {
     }
     return display;
 }
+
+std::size_t displayBytes(const cv::Mat& image) { return image.total() * 4; } // 8-bit RGBA
 
 } // namespace viewer_core
