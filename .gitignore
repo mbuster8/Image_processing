@@ -1,0 +1,9 @@
+docs/superpowers/
+
+# Build trees and IDE state
+build/
+CMakeUserPresets.json
+*.user
+.qtcreator/
+.cache/
+.DS_Store

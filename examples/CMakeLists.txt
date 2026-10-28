@@ -1,0 +1,2 @@
+add_subdirectory(pipeline_demo)
+add_subdirectory(minimal_sender)
