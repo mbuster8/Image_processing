@@ -286,8 +286,8 @@ to six significant digits, always with a decimal point regardless of the system'
 open build/debug/apps/example_sender/visual_debug_example_sender.app
 ```
 
-The Visual Debug Example Sender shows how a Qt application uses the library. Its icon, an amber disc with
-a paper plane, tells it apart from the viewer in the Dock. The bar along the top, on the same panel grey as the viewer's sidebar, holds **Open…** (Ctrl+O), **Send
+The Visual Debug Example Sender shows how a Qt application uses the library. Its icon, a white paper
+plane in the viewer's blue ring, tells it apart from the viewer's eye in the Dock. The bar along the top, on the same panel grey as the viewer's sidebar, holds **Open…** (Ctrl+O), **Send
 image** (Ctrl+Return) and the **Send to** field with the endpoint images go to; the preview fills the rest of
 the window. Open an image and a preview appears;
 **Send image** stays disabled until then. Each send shows its name and result in the status bar, such as
