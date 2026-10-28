@@ -40,8 +40,12 @@ struct DecodeError {
 // side and kMaxPixelBytes in total. Reads only the image's metadata.
 bool isSupportedImage(const cv::Mat& image);
 
-// Names that are not valid UTF-8 have the bad bytes replaced with U+FFFD, then are cut to kMaxNameBytes
-// at a character boundary.
+// Replaces bytes that are not valid UTF-8 with U+FFFD, then cuts the name to kMaxNameBytes at a character
+// boundary. encode applies it to every name; the viewer applies it to renamed images, so both follow one
+// rule.
+std::string sanitiseName(std::string_view name);
+
+// The name goes through sanitiseName.
 std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::string_view name);
 
 // Validates every header field and the pixel frame length before allocating. The returned image owns

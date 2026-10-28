@@ -37,12 +37,14 @@ constexpr std::array<DepthInfo, 7> kDepths{{
 }};
 
 const DepthInfo* findDepth(int depth) {
-    const auto it = std::find_if(kDepths.begin(), kDepths.end(), [&](const auto& d) { return d.depth == depth; });
+    const auto it =
+        std::find_if(kDepths.begin(), kDepths.end(), [&](const auto& d) { return d.depth == depth; });
     return it == kDepths.end() ? nullptr : &*it;
 }
 
 const DepthInfo* findDepth(std::string_view name) {
-    const auto it = std::find_if(kDepths.begin(), kDepths.end(), [&](const auto& d) { return d.name == name; });
+    const auto it =
+        std::find_if(kDepths.begin(), kDepths.end(), [&](const auto& d) { return d.name == name; });
     return it == kDepths.end() ? nullptr : &*it;
 }
 
@@ -214,11 +216,14 @@ std::variant<ImageMessage, DecodeError> decodeChecked(std::string_view headerTex
     }
 
     // cv::Mat has no read-only view type; the clone is the only access, and gives the image its own pixels.
-    const cv::Mat view(*rows, *cols, CV_MAKETYPE(depth->depth, *channels), const_cast<std::byte*>(pixels.data()));
+    const cv::Mat view(*rows, *cols, CV_MAKETYPE(depth->depth, *channels),
+                       const_cast<std::byte *>(pixels.data()));
     return ImageMessage{nameText, view.clone()};
 }
 
 } // namespace
+
+std::string sanitiseName(std::string_view name) { return truncateUtf8(toValidUtf8(name), kMaxNameBytes); }
 
 std::span<const std::byte> EncodedMessage::pixelBytes() const {
     return {reinterpret_cast<const std::byte*>(pixels.data), pixels.total() * pixels.elemSize()};
@@ -230,7 +235,8 @@ bool isSupportedImage(const cv::Mat& image) {
         return false;
     }
     const DepthInfo* depth = findDepth(image.depth());
-    return depth != nullptr && pixelByteCount(image.rows, image.cols, image.channels(), *depth) <= kMaxPixelBytes;
+    return depth != nullptr &&
+           pixelByteCount(image.rows, image.cols, image.channels(), *depth) <= kMaxPixelBytes;
 }
 
 std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::string_view name) {
@@ -242,7 +248,7 @@ std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::stri
         {"protocol", kProtocolName},
         {"version", kProtocolVersion},
         {"type", kImageType},
-        {"name", truncateUtf8(toValidUtf8(name), kMaxNameBytes)},
+        {"name", sanitiseName(name)},
         {"rows", image.rows},
         {"cols", image.cols},
         {"depth", findDepth(image.depth())->name},

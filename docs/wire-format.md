@@ -136,6 +136,7 @@ hostile header cannot make the reply itself fail to encode.
 | `pixel frame has the wrong size` | The pixel frame's length does not match the header. |
 | `could not decode message` | Any other failure while decoding. |
 | `viewer busy` | The viewer accepted the message but its display is too far behind (eight images waiting for longer than 200 ms). |
+| `viewer paused` | The viewer is paused: it keeps its port but takes no images until resumed. Sent for every request while paused, before any other check. |
 | `internal error` | An unexpected failure in the viewer; it keeps running. |
 
 The C++ client reports any error reply as `SendResult::Rejected`.

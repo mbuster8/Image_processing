@@ -2,6 +2,7 @@
 
 #include "visual_debug/client.h"
 #include "visual_debug/server.h"
+#include "visual_debug/wire_format.h"
 
 #include <gtest/gtest.h>
 #include <opencv2/core.hpp>
@@ -11,6 +12,7 @@
 #include <chrono>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 
 // Real ZeroMQ over loopback. Every server binds an ephemeral port ("tcp://127.0.0.1:*") and reports it, so
@@ -34,8 +36,8 @@ cv::Mat smallImage() { return cv::Mat(3, 4, CV_8UC3, cv::Scalar(1, 2, 3)); }
 // that an operation copied no image.
 class CountingAllocator : public cv::MatAllocator {
 public:
-    cv::UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step, cv::AccessFlag flags,
-                           cv::UMatUsageFlags usageFlags) const override {
+    cv::UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step,
+                           cv::AccessFlag flags, cv::UMatUsageFlags usageFlags) const override {
         ++m_count;
         return cv::Mat::getStdAllocator()->allocate(dims, sizes, type, data, step, flags, usageFlags);
     }
@@ -207,7 +209,9 @@ TEST(ClientServer, RefusesNonLoopbackBindByDefault) {
     CollectingSink sink;
     // Refused before any socket is opened, so this exposes nothing.
     Server wildcard(sink, {.endpoint = "tcp://*:*"});
-    EXPECT_TRUE(wildcard.start().has_value());
+    const auto refusal = wildcard.start();
+    ASSERT_TRUE(refusal.has_value());
+    EXPECT_TRUE(refusal->reason.starts_with("refusing to listen on [tcp://*:*]: ")) << refusal->reason;
     EXPECT_FALSE(wildcard.isRunning());
 
     // To show allowRemote lifts the refusal without opening a port to the network (and triggering a
@@ -236,7 +240,10 @@ TEST(ClientServer, ReportsBindFailureWhenEndpointTaken) {
 
     Server second(sink, {.endpoint = first.boundEndpoint()});
 
-    EXPECT_TRUE(second.start().has_value());
+    const auto error = second.start();
+    ASSERT_TRUE(error.has_value());
+    EXPECT_TRUE(error->reason.starts_with("could not listen on [" + first.boundEndpoint() + "]: "))
+        << error->reason;
     EXPECT_FALSE(second.isRunning());
 }
 
@@ -278,6 +285,109 @@ TEST(ClientServer, DoesNotCopyImagesWhileViewerIsUnavailable) {
     EXPECT_EQ(first, SendResult::ViewerUnavailable);
     EXPECT_EQ(second, SendResult::ViewerUnavailable);
     EXPECT_EQ(allocator.count(), 0);
+}
+
+// A paused viewer keeps its port, so a sender learns it is paused instead of waiting for a timeout.
+TEST(ClientServer, PausedServerRepliesViewerPausedWithoutDelivering) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    server.setPaused(true);
+    const auto encoded = visual_debug::encode(smallImage(), "x");
+    ASSERT_TRUE(std::holds_alternative<visual_debug::EncodedMessage>(encoded));
+    const auto& message = std::get<visual_debug::EncodedMessage>(encoded);
+    const auto pixels = message.pixelBytes();
+
+    const auto reply = test_support::rawRequest(
+        server.boundEndpoint(),
+        {message.header, std::string(reinterpret_cast<const char*>(pixels.data()), pixels.size())});
+
+    ASSERT_TRUE(reply.has_value());
+    EXPECT_EQ(reply->value("status", ""), "error");
+    EXPECT_EQ(reply->value("reason", ""), "viewer paused");
+    EXPECT_EQ(sink.count(), 0u);
+    EXPECT_TRUE(server.isPaused());
+}
+
+TEST(ClientServer, ClientGetsRejectedWhilePaused) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    server.setPaused(true);
+    Client client({.endpoint = server.boundEndpoint()});
+
+    EXPECT_EQ(client.send(smallImage(), "x"), SendResult::Rejected);
+    EXPECT_EQ(sink.count(), 0u);
+}
+
+TEST(ClientServer, DeliversAgainAfterResume) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    Client client({.endpoint = server.boundEndpoint()});
+    server.setPaused(true);
+    ASSERT_EQ(client.send(smallImage(), "paused"), SendResult::Rejected);
+
+    server.setPaused(false);
+
+    EXPECT_FALSE(server.isPaused());
+    EXPECT_EQ(client.send(smallImage(), "resumed"), SendResult::Delivered);
+    ASSERT_TRUE(sink.waitForCount(1, 1s));
+    EXPECT_EQ(sink.messages().front().name, "resumed");
+}
+
+TEST(ClientServer, RestartsOnTheSameEndpoint) {
+    const auto endpoint = unusedEndpoint();
+    CollectingSink sink;
+    Server server(sink, {.endpoint = endpoint});
+    ASSERT_TRUE(started(server));
+    server.stop();
+
+    ASSERT_TRUE(started(server));
+
+    EXPECT_TRUE(server.isRunning());
+    Client client({.endpoint = endpoint});
+    EXPECT_EQ(client.send(smallImage(), "after restart"), SendResult::Delivered);
+}
+
+TEST(ClientServer, StampsReceivedTime) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    Client client({.endpoint = server.boundEndpoint()});
+    const auto before = std::chrono::system_clock::now();
+
+    ASSERT_EQ(client.send(smallImage(), "timed"), SendResult::Delivered);
+
+    ASSERT_TRUE(sink.waitForCount(1, 1s));
+    const auto receivedAt = sink.messages().front().receivedAt;
+    EXPECT_LE(before, receivedAt);
+    EXPECT_LE(receivedAt, std::chrono::system_clock::now());
+}
+
+// The viewer logs rejected requests, so every error reply must reach the sink, paused ones included.
+TEST(ClientServer, ReportsEveryErrorReplyToTheSink) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    ASSERT_TRUE(test_support::rawRequest(server.boundEndpoint(), {"one frame"}).has_value());
+    server.setPaused(true);
+    Client client({.endpoint = server.boundEndpoint()});
+
+    ASSERT_EQ(client.send(smallImage(), "x"), SendResult::Rejected);
+
+    EXPECT_EQ(sink.rejections(), (std::vector<std::string>{"expected exactly two frames", "viewer paused"}));
+}
+
+TEST(ClientServer, ReportsBusyToTheSink) {
+    BusySink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    Client client({.endpoint = server.boundEndpoint()});
+
+    ASSERT_EQ(client.send(smallImage(), "x"), SendResult::Rejected);
+
+    EXPECT_EQ(sink.rejections(), std::vector<std::string>{"viewer busy"});
 }
 
 TEST(ClientServer, DeliversLargeImageWithinDefaultTimeout) {

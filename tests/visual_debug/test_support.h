@@ -18,8 +18,26 @@
 
 namespace test_support {
 
+// Keeps the reason of every request the server turned away. Thread-safe.
+class RejectionRecordingSink : public visual_debug::ImageSink {
+public:
+    void onRequestRejected(std::string_view reason) override {
+        std::lock_guard lock(m_mutex);
+        m_rejections.emplace_back(reason);
+    }
+
+    std::vector<std::string> rejections() const {
+        std::lock_guard lock(m_mutex);
+        return m_rejections;
+    }
+
+private:
+    mutable std::mutex m_mutex;
+    std::vector<std::string> m_rejections;
+};
+
 // Thread-safe sink that keeps every image it receives.
-class CollectingSink : public visual_debug::ImageSink {
+class CollectingSink : public RejectionRecordingSink {
 public:
     bool onImageReceived(visual_debug::ImageMessage message) override {
         {
@@ -53,7 +71,7 @@ private:
 };
 
 // A viewer that is always too busy to take another image.
-class BusySink : public visual_debug::ImageSink {
+class BusySink : public RejectionRecordingSink {
 public:
     bool onImageReceived(visual_debug::ImageMessage) override { return false; }
 };
@@ -92,7 +110,8 @@ inline std::string unusedEndpoint() {
 
 // Sends raw frames from a plain REQ socket, as a misbehaving sender would, and returns the parsed reply,
 // or nothing if no reply arrives within a second.
-inline std::optional<nlohmann::json> rawRequest(const std::string& endpoint, const std::vector<std::string>& frames) {
+inline std::optional<nlohmann::json> rawRequest(const std::string& endpoint,
+                                                const std::vector<std::string>& frames) {
     zmq::context_t context;
     zmq::socket_t socket(context, zmq::socket_type::req);
     socket.set(zmq::sockopt::linger, 0);

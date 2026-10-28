@@ -33,9 +33,14 @@ public:
     Server& operator=(const Server&) = delete;
 
     // Binds and starts the receive thread; a failure (port in use, refused endpoint) is returned, not thrown.
+    // After stop() it binds again.
     [[nodiscard]] std::optional<StartError> start();
     void stop(); // idempotent
     bool isRunning() const;
+    // While paused the server keeps its port and answers every request with the error "viewer paused",
+    // without decoding it or offering it to the sink. Safe to call from any thread.
+    void setPaused(bool paused);
+    bool isPaused() const;
     // The endpoint actually bound, with the port filled in when the options asked for "*".
     std::string boundEndpoint() const;
 

@@ -68,9 +68,10 @@ TEST_P(WireFormatRoundTrip, RoundTripsEveryDepthAndChannelCount) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AllDepthsAndChannels, WireFormatRoundTrip,
-                         testing::Combine(testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                         testing::Combine(testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F,
+                                                          CV_64F),
                                           testing::Range(1, 5)),
-                         [](const testing::TestParamInfo<WireFormatRoundTrip::ParamType>& info) {
+                         [](const testing::TestParamInfo<WireFormatRoundTrip::ParamType> &info) {
                              return depthLabel(std::get<0>(info.param)) + "C" +
                                     std::to_string(std::get<1>(info.param));
                          });
@@ -128,6 +129,23 @@ TEST(WireFormat, ReplacesInvalidUtf8InName) {
     EXPECT_EQ(roundTrip(image, "caf\xE9").name, "caf\xEF\xBF\xBD");
 }
 
+// The viewer applies the same rule to names typed in a rename, so the rule is public.
+TEST(WireFormat, SanitiseNameCutsAtCharacterBoundary) {
+    const std::string name = std::string(1023, 'a') + "é"; // é is two bytes: 1025 in total
+    EXPECT_EQ(visual_debug::sanitiseName(name), std::string(1023, 'a'));
+}
+
+TEST(WireFormat, SanitiseNameReplacesInvalidUtf8) {
+    EXPECT_EQ(visual_debug::sanitiseName("a\xff"
+                                         "b"),
+              "a\xEF\xBF\xBD"
+              "b");
+}
+
+TEST(WireFormat, SanitiseNameKeepsShortValidName) {
+    EXPECT_EQ(visual_debug::sanitiseName("Sobel X"), "Sobel X");
+}
+
 // --- Encoder input checks ----------------------------------------------------------------------------------
 
 TEST(WireFormat, RejectsUnsupportedImagesOnEncode) {
@@ -181,7 +199,8 @@ TEST(WireFormat, RejectsDeeplyNestedHeaderOnSecondaryThread) {
     ASSERT_LE(header.size(), visual_debug::kMaxHeaderBytes);
 
     bool rejected = false;
-    std::thread worker([&] { rejected = std::holds_alternative<DecodeError>(visual_debug::decode(header, {})); });
+    std::thread worker(
+        [&] { rejected = std::holds_alternative<DecodeError>(visual_debug::decode(header, {})); });
     worker.join();
 
     EXPECT_TRUE(rejected);
