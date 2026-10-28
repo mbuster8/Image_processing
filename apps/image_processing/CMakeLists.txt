@@ -15,6 +15,8 @@ add_library(image_processing_ui STATIC
     epoch_time.h
     image_info_bar.cpp
     image_info_bar.h
+    image_sidebar.cpp
+    image_sidebar.h
     image_store.cpp
     image_store.h
     image_view.cpp
@@ -33,6 +35,10 @@ add_library(image_processing_ui STATIC
     storage_worker.cpp
     storage_worker.h
     thumbnail_action.h
+    thumbnail_delegate.cpp
+    thumbnail_delegate.h
+    thumbnail_model.cpp
+    thumbnail_model.h
     thumbnail_panel.cpp
     thumbnail_panel.h)
 target_include_directories(image_processing_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -27,3 +27,20 @@ void QtImageSink::markHandled() {
     }
     m_slotFreed.notify_one();
 }
+
+void QtImageSink::onRequestRejected(std::string_view reason) {
+    bool first = false;
+    {
+        const std::lock_guard lock(m_mutex);
+        first = m_rejections.empty();
+        ++m_rejections[std::string(reason)];
+    }
+    if (first) {
+        emit requestsRejected();
+    }
+}
+
+std::map<std::string, int> QtImageSink::takeRejections() {
+    const std::lock_guard lock(m_mutex);
+    return std::exchange(m_rejections, {});
+}

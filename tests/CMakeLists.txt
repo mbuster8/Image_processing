@@ -59,8 +59,10 @@ if(IMAGE_PROCESSING_BUILD_QT_APPS)
             image_processing/data_folder_test.cpp
             image_processing/image_file_test.cpp
             image_processing/image_info_bar_test.cpp
+            image_processing/image_sidebar_test.cpp
             image_processing/image_store_test.cpp
             image_processing/image_view_test.cpp
+            image_processing/main_window_test.cpp
             image_processing/outline_icons_test.cpp
             image_processing/qimage_conversion_test.cpp
             image_processing/qt_image_sink_test.cpp

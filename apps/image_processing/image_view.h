@@ -18,6 +18,7 @@ public:
 
     void setImage(const QImage& image); // shown fitted to the view
     void clear();
+    bool hasImage() const;
 
 signals:
     void pixelHovered(int x, int y);

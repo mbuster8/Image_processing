@@ -3,11 +3,14 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QObject>
+#include <QSignalSpy>
 #include <QThread>
 
 #include <gtest/gtest.h>
 #include <opencv2/core.hpp>
 
+#include <map>
+#include <string>
 #include <thread>
 
 namespace {
@@ -20,7 +23,8 @@ TEST(QtImageSink, DeliversOnReceiverThread) {
     Qt::HANDLE slotThread = nullptr;
     QObject::connect(
         &sink, &QtImageSink::imageReceived, &receiver,
-        [&](const visual_debug::ImageMessage&) { slotThread = QThread::currentThreadId(); }, Qt::QueuedConnection);
+        [&](const visual_debug::ImageMessage &) { slotThread = QThread::currentThreadId(); },
+        Qt::QueuedConnection);
 
     bool accepted = false;
     std::thread serverThread([&] { accepted = sink.onImageReceived(smallMessage()); });
@@ -62,6 +66,31 @@ TEST(QtImageSink, WaitsForTheUiBeforeReportingBusy) {
     ui.join();
 
     EXPECT_TRUE(accepted);
+}
+
+// Rejections are counted on the server thread and taken by the UI in one go, so a flood of them costs one
+// queued signal, never a queue that grows with the flood.
+TEST(QtImageSink, CombinesRejectionsUntilTheUiTakesThem) {
+    QtImageSink sink;
+    QSignalSpy rejected(&sink, &QtImageSink::requestsRejected);
+
+    std::thread serverThread([&sink] {
+        for (int i = 0; i < 3; ++i) {
+            sink.onRequestRejected("viewer busy");
+        }
+        sink.onRequestRejected("viewer paused");
+    });
+    serverThread.join();
+    QCoreApplication::processEvents();
+
+    EXPECT_EQ(rejected.count(), 1);
+    const std::map<std::string, int> expected{{"viewer busy", 3}, {"viewer paused", 1}};
+    EXPECT_EQ(sink.takeRejections(), expected);
+    EXPECT_TRUE(sink.takeRejections().empty());
+
+    // Taken, the next rejection signals again.
+    sink.onRequestRejected("viewer busy");
+    EXPECT_EQ(rejected.count(), 2);
 }
 
 } // namespace

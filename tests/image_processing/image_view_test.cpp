@@ -1,8 +1,10 @@
 #include "image_view.h"
 
+#include <QColor>
 #include <QCoreApplication>
 #include <QImage>
 #include <QMouseEvent>
+#include <QPalette>
 #include <QSignalSpy>
 #include <QWheelEvent>
 
@@ -72,6 +74,45 @@ TEST_F(ImageViewTest, ReportsPixelUnderCursorAfterZoomingOutToFit) {
     ASSERT_EQ(hovered.size(), 1);
     EXPECT_EQ(hovered.last().at(0).toInt(), 90);
     EXPECT_EQ(hovered.last().at(1).toInt(), 90);
+}
+
+// The view's pixel at (x, y) in widget coordinates.
+QColor pixelOf(ImageView& view, int x, int y) {
+    const QImage grabbed = view.grab().toImage();
+    const qreal ratio = grabbed.devicePixelRatio();
+    return grabbed.pixelColor(qRound(x * ratio), qRound(y * ratio));
+}
+
+// A 100×50 image fits the 200×200 view at scale 2: 200×100, centred, so rows 0 to 49 are background.
+TEST_F(ImageViewTest, BackgroundIsTheWindowColour) {
+    m_view.setImage(filledImage(100, 50));
+
+    EXPECT_EQ(pixelOf(m_view, 100, 10).rgb(), m_view.palette().color(QPalette::Window).rgb());
+}
+
+TEST_F(ImageViewTest, TransparentPixelsShowACheckerboard) {
+    QImage transparent(100, 100, QImage::Format_RGBA8888);
+    transparent.fill(Qt::transparent);
+    m_view.setImage(transparent);
+
+    const QColor first = pixelOf(m_view, 4, 4); // checker squares are 8 px, from the image's corner
+    const QColor second = pixelOf(m_view, 12, 4);
+    const QColor window = m_view.palette().color(QPalette::Window);
+
+    EXPECT_NE(first.rgb(), second.rgb());
+    EXPECT_NE(first.rgb(), window.rgb());
+    EXPECT_NE(second.rgb(), window.rgb());
+}
+
+TEST_F(ImageViewTest, BackgroundFollowsPaletteChange) {
+    m_view.setImage(filledImage(100, 50));
+    QPalette palette = m_view.palette();
+    palette.setColor(QPalette::Window, Qt::green);
+
+    m_view.setPalette(palette);
+    m_view.update();
+
+    EXPECT_EQ(pixelOf(m_view, 100, 10).rgb(), QColor(Qt::green).rgb());
 }
 
 } // namespace

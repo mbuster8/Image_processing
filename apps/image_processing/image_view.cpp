@@ -1,7 +1,9 @@
 #include "image_view.h"
 
+#include <QBrush>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPixmap>
 #include <QResizeEvent>
 #include <QWheelEvent>
 
@@ -9,9 +11,22 @@
 
 namespace {
 
+constexpr int kCheckerSquare = 8;
+
 cv::Point2d toCv(QPointF point) { return {point.x(), point.y()}; }
 
 QPointF toQt(cv::Point2d point) { return {point.x, point.y}; }
+
+// Two greys from the palette, so the checks suit dark and light mode alike.
+QBrush checkerboard(const QPalette& palette) {
+    QPixmap tile(2 * kCheckerSquare, 2 * kCheckerSquare);
+    tile.fill(palette.color(QPalette::Midlight));
+    QPainter painter(&tile);
+    const QColor dark = palette.color(QPalette::Mid);
+    painter.fillRect(kCheckerSquare, 0, kCheckerSquare, kCheckerSquare, dark);
+    painter.fillRect(0, kCheckerSquare, kCheckerSquare, kCheckerSquare, dark);
+    return QBrush(tile);
+}
 
 } // namespace
 
@@ -36,19 +51,26 @@ void ImageView::clear() {
     update();
 }
 
+bool ImageView::hasImage() const { return !m_image.isNull(); }
+
 void ImageView::paintEvent(QPaintEvent*) {
     QPainter painter(this);
-    painter.fillRect(rect(), palette().color(QPalette::Dark));
+    // Read from the palette at paint time, so a switch between dark and light mode is followed.
+    painter.fillRect(rect(), palette().color(QPalette::Window));
     if (m_image.isNull()) {
-        painter.setPen(palette().color(QPalette::BrightText));
+        painter.setPen(palette().color(QPalette::WindowText));
         painter.drawText(rect(), Qt::AlignCenter,
                          tr("No image yet.\nSend one with visual_debug::sendImage(), or use File → Open…"));
         return;
     }
-    // Smooth when shrinking; nearest-neighbour when enlarging, so individual pixels stay visible.
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, m_viewport.scale() < 1.0);
     const cv::Rect2d source = m_viewport.visibleImageRect();
     const QRectF target(toQt(m_viewport.imageToView(source.tl())), toQt(m_viewport.imageToView(source.br())));
+    // Under the image, so transparent pixels show as checks. Opaque images cover it completely. The checks
+    // start at the image's corner, so they move with it when panning.
+    painter.setBrushOrigin(toQt(m_viewport.imageToView({0.0, 0.0})));
+    painter.fillRect(target, checkerboard(palette()));
+    // Smooth when shrinking; nearest-neighbour when enlarging, so individual pixels stay visible.
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, m_viewport.scale() < 1.0);
     painter.drawImage(target, m_image, QRectF(source.x, source.y, source.width, source.height));
 }
 
