@@ -60,6 +60,15 @@ ctest --preset debug           # run all tests
 Replace `debug` with `release` or `asan` for the other builds. To rebuild from scratch, add
 `--clean-first` to the build command, or delete the preset's folder under `build/`.
 
+Then run what you built (the [user guide](user-guide.md) explains each program), with `build/release` for
+the release build:
+
+```sh
+open build/debug/apps/viewer/visual_debug_viewer.app                   # the Visual Debug Viewer
+build/debug/examples/pipeline_demo/pipeline_demo                       # sends it ten images
+open build/debug/apps/example_sender/visual_debug_example_sender.app   # the Visual Debug Example Sender
+```
+
 The build is warning-free under `-Wall -Wextra -Wpedantic`. Warnings are not errors, so a newer compiler
 or library cannot break the build, but a new warning from project code should be fixed.
 
@@ -70,22 +79,27 @@ or library cannot break the build, but a new warning from project code should be
 | `visual_debug` | The sender library: wire format, `Client`, `Server`, `sendImage` | `libs/visual_debug/libvisual_debug.a` |
 | `viewer_core` | The viewer's UI-free logic: display conversion, history, pixel readout, zoom | `libs/viewer_core/libviewer_core.a` |
 | `qt_common` | Qt helpers shared by both apps | `apps/qt_common/libqt_common.a` |
-| `image_processing_ui` | The viewer's windows, as a library the Qt tests link | `apps/image_processing/libimage_processing_ui.a` |
-| `image_processing` | **The viewer** | `apps/image_processing/image_processing.app` |
-| `client_ui` | The client's window, as a library its tests link | `apps/client/libclient_ui.a` |
-| `client` | The Qt demo sender | `apps/client/client.app` |
+| `viewer_ui` | The viewer's windows, as a library its tests link | `apps/viewer/libviewer_ui.a` |
+| `visual_debug_viewer` | **The Visual Debug Viewer** | `apps/viewer/visual_debug_viewer.app` |
+| `example_sender_ui` | The example sender's window, as a library its tests link | `apps/example_sender/libexample_sender_ui.a` |
+| `visual_debug_example_sender` | The Visual Debug Example Sender, a Qt app that sends image files | `apps/example_sender/visual_debug_example_sender.app` |
 | `pipeline` | The demo's OpenCV stages | `examples/pipeline_demo/libpipeline.a` |
 | `pipeline_demo` | Command-line demo: an OpenCV pipeline that sends every stage | `examples/pipeline_demo/pipeline_demo` |
 | `minimal_sender` | The smallest use of `sendImage` | `examples/minimal_sender/minimal_sender` |
-| `visual_debug_tests`, `viewer_core_tests`, `qt_ui_tests`, `client_ui_tests`, `pipeline_tests` | GoogleTest executables | `tests/` |
+| `visual_debug_tests`, `viewer_core_tests`, `qt_common_tests`, `viewer_ui_tests`, `example_sender_ui_tests`, `pipeline_tests` | GoogleTest executables | `tests/` |
 
 To build one target: `cmake --build --preset debug --target pipeline_demo`.
+
+The apps' file names are the same on every platform. On macOS, Finder lists the file name, while the menu
+bar, ⌘-Tab and the Dock show the bundle's name, such as **Visual Debug Viewer**. Each bundle's icon is
+made at build time from the PNG in `resources/icons/`, with the `sips` and `iconutil` tools that come with
+macOS.
 
 ### Options
 
 | Option | Default | Effect |
 |---|---|---|
-| `IMAGE_PROCESSING_BUILD_QT_APPS` | `ON` | The viewer, the client, `qt_common` and the Qt tests |
+| `IMAGE_PROCESSING_BUILD_QT_APPS` | `ON` | The viewer, the example sender, `qt_common` and the Qt tests |
 | `IMAGE_PROCESSING_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender` and their tests |
 | `IMAGE_PROCESSING_BUILD_TESTS` | `ON` | All GoogleTest executables |
 | `IMAGE_PROCESSING_SANITIZERS` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer (the `asan` preset turns it on) |
@@ -106,7 +120,7 @@ CMake then does not look for Qt at all; both libraries, both examples and their 
 ## Running the tests
 
 ```sh
-ctest --preset debug                       # everything (388 tests, about 45 seconds)
+ctest --preset debug                       # everything (395 tests, about 50 seconds)
 ctest --preset debug -R WireFormat         # only tests whose name matches a regular expression
 ctest --preset debug -R "Client|Server"
 ctest --preset asan                        # the same tests under the sanitizers (about a minute)
@@ -138,14 +152,14 @@ by hand. If a menu has moved in your version, the presets above still work from 
    **Configure Project**. Qt Creator reads `CMakePresets.json`, so the build folders are the same
    `build/<preset>` ones as on the command line.
 3. Build with **Build → Build All Projects** (⌘B).
-4. Run: pick `image_processing` in the run target selector (the computer icon at the bottom left) and
+4. Run: pick `visual_debug_viewer` in the run target selector (the computer icon at the bottom left) and
    press **Run** (⌘R). Pick `pipeline_demo` and run it to send it some images.
 5. Tests: open the **Test Results** pane (**View → Output → Test Results**), then **Tools → Tests → Run
    All Tests**. Qt Creator runs each GoogleTest program itself and lists the results by test suite. Unlike
    `ctest`, it runs all the tests of one program in a single process, so a test that leaves global state
    behind (or crashes) affects the tests after it, and the pane reports the program as crashed. If
-   `qt_ui_tests` crashes in `ThumbnailPanel`, see the `ImageIO` entry under Troubleshooting.
-6. Debugging: click in the margin of `apps/image_processing/image_view.cpp` next to the first line of
+   `viewer_ui_tests` crashes in `ThumbnailPanel`, see the `ImageIO` entry under Troubleshooting.
+6. Debugging: click in the margin of `apps/viewer/image_view.cpp` next to the first line of
    `ImageView::wheelEvent` to set a breakpoint, start with **Debug → Start Debugging** (⌘Y), and scroll
    the mouse wheel over an image in the viewer. Qt Creator stops at the breakpoint with LLDB.
 
@@ -161,8 +175,9 @@ run setting **Add build library search path to DYLD_LIBRARY_PATH and DYLD_FRAMEW
 `/opt/homebrew/lib`, where Homebrew's OpenCV, ZeroMQ and Qt live, on `DYLD_LIBRARY_PATH`. macOS then loads
 Homebrew's `libpng` in place of its own, and drawing a colour emoji (an image name such as `ž😀`, as in
 `ThumbnailPanel.LongNameKeepsCellSize`) crashes. In **Projects → Run Settings**, pick each run configuration
-in turn (the viewer, the client and each test program) and untick that setting, just below **Run in
-terminal**: the executables find their libraries through their rpath and need no search path. `ctest` and
+in turn (the viewer, the example sender and each test program) and untick that setting, just below **Run
+in terminal**: the executables find their libraries through their rpath and need no search path. A run
+configuration Qt Creator makes for a new or renamed target starts with the setting ticked again. `ctest` and
 Finder never set it.
 
 **`Could NOT find WrapVulkanHeaders` during configure.** Qt looks for optional Vulkan support. Harmless;
@@ -201,7 +216,10 @@ sudo apt install build-essential cmake ninja-build pkgconf qt6-base-dev libopenc
 ```
 
 Then build with the presets as above. The presets add `/opt/homebrew/bin` to `PATH`, which is harmless on
-Linux because a missing folder on `PATH` is ignored.
+Linux because a missing folder on `PATH` is ignored. The apps are then plain executables rather than
+bundles, under the same names: `build/debug/apps/viewer/visual_debug_viewer` and
+`build/debug/apps/example_sender/visual_debug_example_sender`. Their windows show their icons, but there is
+no desktop launcher for them yet.
 
 ## Windows
 

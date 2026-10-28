@@ -9,8 +9,8 @@ build.
 
 | Program | What it is for |
 |---|---|
-| `image_processing` (the **viewer**) | Shows every image sent to it, keeps a history of thumbnails, zooms, pans and reads out the original value of the pixel under the cursor. Can also open image files itself. |
-| `client` | A small Qt app: open an image file and send it to the viewer. Shows how a GUI application uses the library. |
+| `visual_debug_viewer` (the **Visual Debug Viewer**, or the viewer) | Shows every image sent to it, keeps a history of thumbnails, zooms, pans and reads out the original value of the pixel under the cursor. Can also open image files itself. |
+| `visual_debug_example_sender` (the **Visual Debug Example Sender**) | A small Qt app: open an image file and send it to the viewer. Shows how a GUI application uses the library. |
 | `pipeline_demo` | A command-line OpenCV pipeline that sends the result of each of its ten stages. Exercises every image type the viewer handles. |
 | `minimal_sender` | The smallest real use of the library: one include, one call per image. |
 
@@ -20,7 +20,7 @@ default. Start the viewer first.
 ## Running the viewer
 
 ```sh
-open build/debug/apps/image_processing/image_processing.app
+open build/debug/apps/viewer/visual_debug_viewer.app
 ```
 
 The window opens maximised, with the keyboard on the sidebar's thumbnails. The sidebar, the status bar and
@@ -28,7 +28,7 @@ the activity log sit on a grey a step off the image area's background, in the li
 alike, and a thin line divides each from the image area; the dividers you can drag carry a small grip in the
 middle. Around the image is the window's own background colour, which also follows the appearance. The title
 names the image in the view and the endpoint without `tcp://`, for example
-`Image Processing — Sobel X — 127.0.0.1:7139`, so several viewers can be told apart in the Dock and the
+`Visual Debug Viewer — Sobel X — 127.0.0.1:7139`, so several viewers can be told apart in the Dock and the
 **Window** menu. The right-hand end of the status bar shows the server's buttons, a state dot and the
 connection state, then **Log ▴** at the far right (see [Activity log](#activity-log)):
 
@@ -83,7 +83,7 @@ you read further down. **Copy** puts the selected entries on the clipboard as li
 every entry when none is selected. **Clear** empties the panel and the stored log, without asking.
 
 **Kept between sessions.** The newest 1000 entries are stored in `activity.log`, in a folder per endpoint under
-`~/Library/Application Support/Image Processing/` (such as `tcp_127.0.0.1_7139`), readable by you only, and
+`~/Library/Application Support/Visual Debug Viewer/` (such as `tcp_127.0.0.1_7139`), readable by you only, and
 loaded at the next start. Three cases keep the log in memory only, and the log says so at start:
 
 - a port of `*`, which changes on every start, so the folder could never be found again (an endpoint
@@ -98,7 +98,7 @@ on the same endpoint shows the same images, newest first, with their names (rena
 received and modified times and their original pixels at every depth. It is off by default.
 
 - **What is stored, and where.** Each image is written as it arrives, as its original pixels, in the
-  endpoint's folder under `~/Library/Application Support/Image Processing/` (such as
+  endpoint's folder under `~/Library/Application Support/Visual Debug Viewer/` (such as
   `tcp_127.0.0.1_7139/images`), with a small index of the order, names and times. An image's file is deleted
   when it leaves the history: deleted, or dropped because the history is full. **Undo Delete** writes it
   again. The undo buffer itself is not stored.
@@ -125,14 +125,14 @@ Pass options after `--args`. Add `-n` to start another instance; without it, `op
 viewer to the front:
 
 ```sh
-open -n build/debug/apps/image_processing/image_processing.app --args --endpoint tcp://127.0.0.1:7140
+open -n build/debug/apps/viewer/visual_debug_viewer.app --args --endpoint tcp://127.0.0.1:7140
 ```
 
 Or start the binary inside the bundle, which also inherits the terminal's environment and prints
 `--help` to it:
 
 ```sh
-build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_processing --help
+build/debug/apps/viewer/visual_debug_viewer.app/Contents/MacOS/visual_debug_viewer --help
 ```
 
 | Option | Effect |
@@ -157,7 +157,8 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 | ↑ and ↓ | With the sidebar focused, as it is when the window opens, show the image above or below in the list. |
 | **File → Open…** (⌘O) | Open an image file (PNG, JPEG, BMP, TIFF, WebP, PNM, or anything else OpenCV reads). It is read with its original depth and channels, so a 16-bit PNG stays 16-bit, and joins the history like a received image. |
 | **File → Save As…** (⇧⌘S) | Save the image in the view, as shown on screen, as PNG or JPEG. The suggested name is the image's name without an image-file extension (`photo.webp #3` suggests `photo #3.png`; `result v1.2` keeps its dot). `.png` is added if you type no extension. |
-| **Quit** (⌘Q) | Quit. On macOS it is in the application menu (**Image Processing**); on other systems in **File**. |
+| **Quit** (⌘Q) | Quit. On macOS it is in the application menu (**Visual Debug Viewer**); on other systems in **File**. |
+| **About Visual Debug Viewer** | What the viewer is, its version, and the OpenCV and Qt versions it runs with. On macOS it is in the application menu; on other systems in **Help**. |
 | **Edit → Undo Delete** (⌘Z) | Bring back the last deleted image at its place in the list, and show it. The last 10 deletions can be undone. |
 | **Edit → Rename…** (⌘R) | Rename the image in the view, in the info strip (see below). |
 | **Edit → Duplicate** (⌘D) | Add a copy named `<name> copy` directly above the image, and show it. |
@@ -166,7 +167,7 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 | **Edit → Find…** (⌘F) | Put the cursor in the sidebar's search field, with its text selected. |
 | **View → Show in Sidebar**, **View → Sort By** | The same choices as the sidebar's options button (see [The sidebar](#the-sidebar)). |
 | **View → Show Log** (⌘L) | Open or close the activity log, as **Log ▴** in the status bar does (see [Activity log](#activity-log)). |
-| **View → Appearance** | **System** (the default) follows the system's light or dark appearance; **Light** and **Dark** keep one whatever the system does. The choice is kept, and the client shares it (see [Running the client](#running-the-client)). Needs Qt 6.8 or newer: built with older Qt, the menu is absent and both programs follow the system. |
+| **View → Appearance** | **System** (the default) follows the system's light or dark appearance; **Light** and **Dark** keep one whatever the system does. The choice is kept, and the example sender shares it (see [Running the example sender](#running-the-example-sender)). Needs Qt 6.8 or newer: built with older Qt, the menu is absent and both programs follow the system. |
 | **History → Keep Images Between Sessions** | Store the history on disk, for every viewer (see [Keeping images between sessions](#keeping-images-between-sessions)). |
 | **History → Clear History…** | Delete every image in this viewer, in memory and on disk, after asking. |
 | Thumbnail icons | The pencil, two squares and bin beside a thumbnail rename, duplicate and delete that image (see [The sidebar](#the-sidebar)). |
@@ -279,13 +280,14 @@ to six significant digits, always with a decimal point regardless of the system'
 
 **Save As…** writes this displayed version; PNG and JPEG cannot hold every depth.
 
-## Running the client
+## Running the example sender
 
 ```sh
-open build/debug/apps/client/client.app
+open build/debug/apps/example_sender/visual_debug_example_sender.app
 ```
 
-The bar along the top, on the same panel grey as the viewer's sidebar, holds **Open…** (Ctrl+O), **Send
+The Visual Debug Example Sender shows how a Qt application uses the library. Its icon, an amber disc with
+a paper plane, tells it apart from the viewer in the Dock. The bar along the top, on the same panel grey as the viewer's sidebar, holds **Open…** (Ctrl+O), **Send
 image** (Ctrl+Return) and the **Send to** field with the endpoint images go to; the preview fills the rest of
 the window. Open an image and a preview appears;
 **Send image** stays disabled until then. Each send shows its name and result in the status bar, such as
@@ -295,22 +297,24 @@ The viewer shows the image as `<file name> #1`, then `#2` for the next send, and
 did not take (`Viewer unavailable`, `Rejected`, `Invalid image`, `Invalid endpoint`) keeps its number, so
 the next send uses it. `Timeout` uses up its number, because the image may still have reached the
 viewer. The numbers count every send of the session, whichever file it was, and start again
-at `#1` when the client restarts.
+at `#1` when the example sender restarts.
 
 **View → Appearance** offers the viewer's System, Light and Dark choices, and the two programs share one
 setting: choose Dark in either, and the other turns dark when you next switch to it. With Qt older than 6.8
-the client has no View menu.
+the example sender has no View menu. **About Visual Debug Example Sender** sits in the application menu on
+macOS, and in **Help** elsewhere.
 
-**Send to** starts with `$VISUAL_DEBUG_ENDPOINT` if set, otherwise with the endpoint the client last sent
-to, otherwise with `tcp://127.0.0.1:7139`. Edit it to send to another viewer, such as one started with
-`--endpoint tcp://127.0.0.1:7140`; the next send goes there, and the client remembers it for the next start.
+**Send to** starts with `$VISUAL_DEBUG_ENDPOINT` if set, otherwise with the endpoint the example sender last
+sent to, otherwise with `tcp://127.0.0.1:7139`. Edit it to send to another viewer, such as one started with
+`--endpoint tcp://127.0.0.1:7140`; the next send goes there, and the example sender remembers it for the
+next start.
 A send that finds the endpoint unusable (`Invalid endpoint`, for example `tcp://localhost` without a port)
 outlines the field in red until you edit it, and is not remembered. A variable set to
 `tcp://127.0.0.1:7139` itself counts as unset, so the remembered endpoint is used.
 
 ## Configuration
 
-`VISUAL_DEBUG_ENDPOINT` sets the endpoint for `sendImage()`, the client, `pipeline_demo` and the viewer
+`VISUAL_DEBUG_ENDPOINT` sets the endpoint for `sendImage()`, the example sender, `pipeline_demo` and the viewer
 alike, so they find each other without configuration. An empty value counts as unset. An app started with
 `open` does not see your shell's variables: use `open --env VISUAL_DEBUG_ENDPOINT=… <app>`, or the
 viewer's `--endpoint` option.
@@ -455,7 +459,7 @@ Without a path it uses a generated test pattern; with one, it reads the file as 
 with 0 when every stage was delivered, 1 when any was not, and 2 for a bad argument or an unreadable file.
 
 ```text
-$ build/debug/examples/pipeline_demo/pipeline_demo resources/icons/application_icon.png
+$ build/debug/examples/pipeline_demo/pipeline_demo resources/icons/viewer_icon.png
 Original: Delivered
 With alpha: Delivered
 Greyscale: Delivered
@@ -520,8 +524,8 @@ Every stage receives the original image, so a stage never depends on the one bef
 Start a second viewer on its own port:
 
 ```sh
-open build/debug/apps/image_processing/image_processing.app
-open -n build/debug/apps/image_processing/image_processing.app --args --endpoint tcp://127.0.0.1:7140
+open build/debug/apps/viewer/visual_debug_viewer.app
+open -n build/debug/apps/viewer/visual_debug_viewer.app --args --endpoint tcp://127.0.0.1:7140
 ```
 
 `open` returns before the viewers are ready; when the second one's status bar says

@@ -15,8 +15,8 @@ running, the call returns quickly and the program carries on.
 ```mermaid
 flowchart LR
     subgraph apps["Applications (Qt 6)"]
-        viewer["image_processing<br/>the viewer"]
-        client["client<br/>demo sender"]
+        viewer["viewer<br/>Visual Debug Viewer"]
+        sender["example_sender<br/>Visual Debug Example Sender"]
         qtcommon["qt_common<br/>shared Qt helpers"]
     end
     subgraph examples["Examples (no Qt)"]
@@ -28,12 +28,13 @@ flowchart LR
         vc["viewer_core<br/>display, history, readout, zoom"]
     end
     viewer --> qtcommon
-    client --> qtcommon
+    sender --> qtcommon
     viewer --> vd
     viewer --> vc
-    client --> vd
-    client --> vc
+    sender --> vd
+    sender --> vc
     qtcommon --> vd
+    qtcommon --> vc
     pipeline --> vd
     minimal --> vd
     vd --> deps1["OpenCV core, ZeroMQ, nlohmann/json"]
@@ -44,9 +45,9 @@ flowchart LR
 |---|---|
 | `libs/visual_debug` | Everything both ends of the channel share. `wire_format`: encodes an image into the two frames and decodes them back, validating everything and never throwing. `ImageSender`: the interface a host application depends on. `Client`: its ZeroMQ implementation. `sendImage()`: the one-line convenience call, using one process-wide `Client`. `Server`: the viewer's receive loop on its own thread. `ImageSink`: the interface through which the server hands images to whoever displays them. `endpoint`: the default endpoint and the loopback check. |
 | `libs/viewer_core` | The viewer's logic, free of any UI toolkit, so it is unit-tested without Qt. `toDisplayImage`: any supported image to 8-bit RGBA. `ImageHistory`: the bounded list of received images. `inspectPixel`: the readout text for one pixel of the original. `Viewport`: zoom and pan arithmetic. |
-| `apps/qt_common` | The Qt code both apps need: `toQImage` (an RGBA `cv::Mat` to a `QImage`), choosing and reading an image file, `setApplicationIdentity` (the names `QSettings` and the standard paths use), `appearance` (the shared System, Light or Dark setting and its menu), `outline_icons` (the line icons, drawn in the palette's colours), `controls` (the shared control height, framed buttons and the regular font) and `shades` (the panel, hover, selection and divider greys, blended from the palette's window and text colours; `usePanelGrey`, which keeps a widget on the panel grey as the appearance changes; and `DividerLine`). |
-| `apps/image_processing` | The viewer. `MainWindow` composes the parts; `ImageView` paints through a `Viewport`; `ImageSidebar` holds the search field, the sort options and `ThumbnailPanel`, which shows the history: a list view over `ThumbnailModel` (the history's rows, in history order), seen through `ThumbnailFilterModel` (the names the search matches, in the chosen sort) and drawn by `ThumbnailDelegate`; `QtImageSink` moves images from the server thread to the UI thread; `ActivityLog` is the activity log (a list model, stored in the endpoint's `DataFolder`) and `ActivityLogPanel` shows it; `DividerSplitter` is a splitter whose handles draw a divider line and a grip; `ImageStore` keeps images in files, `StorageWorker` drives it on its own thread, and `StorageController` owns that thread and the restore for the window. |
-| `apps/client` | A demo sender. Its window takes a factory that makes an `ImageSender` for an endpoint, so it never knows which transport is behind it, and a new endpoint in its **Send to** field gets a new sender. |
+| `apps/qt_common` | The Qt code both apps need: `toQImage` (an RGBA `cv::Mat` to a `QImage`), choosing and reading an image file, `application_identity` (the apps' names and descriptions; `setApplicationIdentity`, which names what `QSettings` and the standard paths use), `about` (Help → About, which names the OpenCV and Qt versions the app runs with), `appearance` (the shared System, Light or Dark setting and its menu), `outline_icons` (the line icons, drawn in the palette's colours), `controls` (the shared control height, framed buttons and the regular font) and `shades` (the panel, hover, selection and divider greys, blended from the palette's window and text colours; `usePanelGrey`, which keeps a widget on the panel grey as the appearance changes; and `DividerLine`). |
+| `apps/viewer` | The Visual Debug Viewer. `MainWindow` composes the parts; `ImageView` paints through a `Viewport`; `ImageSidebar` holds the search field, the sort options and `ThumbnailPanel`, which shows the history: a list view over `ThumbnailModel` (the history's rows, in history order), seen through `ThumbnailFilterModel` (the names the search matches, in the chosen sort) and drawn by `ThumbnailDelegate`; `QtImageSink` moves images from the server thread to the UI thread; `ActivityLog` is the activity log (a list model, stored in the endpoint's `DataFolder`) and `ActivityLogPanel` shows it; `DividerSplitter` is a splitter whose handles draw a divider line and a grip; `ImageStore` keeps images in files, `StorageWorker` drives it on its own thread, and `StorageController` owns that thread and the restore for the window. |
+| `apps/example_sender` | The Visual Debug Example Sender, which shows how a Qt app uses the library. Its window takes a factory that makes an `ImageSender` for an endpoint, so it never knows which transport is behind it, and a new endpoint in its **Send to** field gets a new sender. |
 | `examples/pipeline_demo` | An ordinary OpenCV program that sends each stage of a pipeline. Its stages are a separate `pipeline` library so tests can check them. |
 | `examples/minimal_sender` | The smallest use of `sendImage`, compiled so the user guide's first example cannot go stale. |
 
@@ -194,7 +195,7 @@ only with fixed ASCII reasons, and survives any malformed message. Details are i
 - **A new sink**: implement `visual_debug::ImageSink` and pass it to a `Server`. A recording sink that
   writes images to disk, or a viewer in another toolkit, needs nothing else from the library.
 - **A new sender**: implement `visual_debug::ImageSender` (for example a shared-memory transport for very
-  large frames). Code written against `ImageSender`, like the client's window, works with it unchanged.
+  large frames). Code written against `ImageSender`, like the example sender's window, works with it unchanged.
 - **A new pipeline stage**: add an entry to `buildPipeline()` in `examples/pipeline_demo/pipeline.cpp`;
   see the [user guide](user-guide.md#4-add-a-stage-to-pipeline_demo).
 - **Viewer features** (histograms, overlays, filters): put the logic in `viewer_core` with unit tests, and

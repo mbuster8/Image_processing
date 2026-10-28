@@ -43,8 +43,9 @@ Options considered, by concern:
 ## Decision
 
 1. **C++20** throughout.
-2. **Qt 6 Widgets for every application**: the viewer (`apps/image_processing`) and the demo sender
-   (`apps/client`). **Qt Creator** is the reference IDE (free, LLDB debugging, UI designer, test runner).
+2. **Qt 6 Widgets for every application**: the viewer (`apps/viewer`) and the example sender
+   (`apps/example_sender`). **Qt Creator** is the reference IDE (free, LLDB debugging, UI designer, test
+   runner).
    No second viewer: the Dear ImGui and Electron options are rejected.
 3. **The two libraries stay Qt-free.** `visual_debug` (transport) depends only on OpenCV core, ZeroMQ and
    nlohmann/json; `viewer_core` (display conversion, history, pixel readout, zoom arithmetic) depends only
@@ -88,5 +89,5 @@ Options considered, by concern:
 
 - `docs/wire-format.md`: the message format, validation rules and replies.
 - `docs/build-guide.md`: installing the dependencies, building, testing and debugging.
-- `docs/user-guide.md`: running the viewer, the client and the examples.
+- `docs/user-guide.md`: running the viewer, the example sender and the examples.
 - `docs/architecture.md`: components, the dependency rule, threads and extension points.

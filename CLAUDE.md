@@ -1,7 +1,8 @@
-# CLAUDE.md — Image Processing visual debugger
+# CLAUDE.md — Image Processing: Visual Debug Viewer for OpenCV
 
-A 2013 thesis project revived in 2026: the `visual_debug` library sends a `cv::Mat` over ZeroMQ to a
-separate Qt 6 viewer with zoom, history and pixel readout. Read the linked documents rather than
+A 2013 thesis project revived in 2026: the `visual_debug` library sends a `cv::Mat` over ZeroMQ to the
+Visual Debug Viewer, a separate Qt 6 app with zoom, history and pixel readout; the Visual Debug Example
+Sender is a small Qt app that shows how to use the library. Read the linked documents rather than
 re-deriving them:
 
 - [`docs/architecture.md`](docs/architecture.md): components, dependency rule, threads, transport, extension points
@@ -27,14 +28,18 @@ ctest --preset asan                   # sanitizers; undefined behaviour aborts t
 cmake --preset debug -B build/no-qt -DIMAGE_PROCESSING_BUILD_QT_APPS=OFF   # proves the libraries need no Qt
 ```
 
-Binaries land in `build/<preset>/`: `apps/image_processing/image_processing.app`, `apps/client/client.app`,
-`examples/pipeline_demo/pipeline_demo`, `examples/minimal_sender/minimal_sender`.
+Binaries land in `build/<preset>/`: `apps/viewer/visual_debug_viewer.app`,
+`apps/example_sender/visual_debug_example_sender.app`, `examples/pipeline_demo/pipeline_demo`,
+`examples/minimal_sender/minimal_sender`. The apps' file names are the same on every platform; their shown
+names ("Visual Debug Viewer", "Visual Debug Example Sender") live in `apps/qt_common/application_identity.h`
+and the bundles' `MACOSX_BUNDLE_BUNDLE_NAME`, and also name their settings and data folders.
 
 ## Layout
 
-`libs/visual_debug` (transport, no Qt) · `libs/viewer_core` (viewer logic, no Qt) · `apps/image_processing`
-(viewer) · `apps/client` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender}` ·
-`tests/{visual_debug,viewer_core,image_processing,client,examples}` · `cmake/` (warnings, sanitizers).
+`libs/visual_debug` (transport, no Qt) · `libs/viewer_core` (viewer logic, no Qt) · `apps/viewer` ·
+`apps/example_sender` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender}` ·
+`tests/{visual_debug,viewer_core,qt_common,viewer,example_sender,examples}` (`tests/qt_common` also holds
+the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macOS bundle icons).
 
 ## Rules that keep it working
 
@@ -66,9 +71,14 @@ text and docs (`normalise`, `colour`); third-party names keep theirs (`cv::COLOR
 `connect`. No `using namespace` in headers. `.clang-format`: LLVM base, 4 spaces, 110 columns. Comments
 explain why.
 
-## Former Slovak names
+## Former names
 
-For reading old commits: `klient` = client · `Obrazky.qrc` = `resources.qrc` · `/zakladne` = `/icons` ·
+Until October 2026 the apps were "Image Processing" in `apps/image_processing` (now `apps/viewer`) and
+"Image Processing Client" in `apps/client` (now `apps/example_sender`); their tests were `qt_ui_tests` (now
+`viewer_ui_tests` and `qt_common_tests`) and `client_ui_tests` (now `example_sender_ui_tests`).
+
+For reading the oldest commits, the Slovak names: `klient` = the client (now the example sender) ·
+`Obrazky.qrc` = `resources.qrc` · `/zakladne` = `/icons` ·
 `TYP_UDAJOV` = the header's `type` · `nazov` = `name` · `sirka`/`vyska` = `cols`/`rows` · `lbl_Okno` =
 `ImageView` · `lbl_obrazok` = `previewLabel` · `menuNazov` = `menuFile` · `môj obrázok č.` = `<file name> #<n>`.
 `my_main_qlabel` became `ImageView` + `viewer_core::Viewport`; `My_label` became `ThumbnailPanel`;

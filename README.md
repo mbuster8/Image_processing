@@ -1,8 +1,8 @@
-# Image Processing — a visual debugger for OpenCV
+# Image Processing — Visual Debug Viewer for OpenCV
 
-An OpenCV program calls one function, and the image appears in a separate viewer window, where you can
-zoom into it, pan around and read the original value of any pixel, whether it is 8-bit, 16-bit, signed or
-floating point.
+An OpenCV program calls one function, and the image appears in the **Visual Debug Viewer**, a separate
+window where you can zoom into it, pan around and read the original value of any pixel, whether it is
+8-bit, 16-bit, signed or floating point.
 
 ```cpp
 #include "visual_debug/send_image.h"
@@ -10,7 +10,7 @@ floating point.
 visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer is running
 ```
 
-![The viewer showing the ten stages of pipeline_demo, newest at the top of the sidebar, with the original 16-bit values of the pixel under the cursor in the status bar](docs/images/viewer.png)
+![The Visual Debug Viewer showing a photo the example sender sent, the pipeline_demo stages below it in the sidebar, the activity log open, and the pixel under the cursor read out in the status bar](docs/images/viewer.png)
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
 brought it back: ported to Qt 6 and OpenCV 5, restructured, tested and documented. What changed, and why,
@@ -30,8 +30,9 @@ flowchart LR
 
 - The **`visual_debug`** library is all a program needs. It depends on OpenCV, ZeroMQ and a header-only
   JSON library, **never Qt**, so it fits into any OpenCV application.
-- The **viewer** is a separate Qt 6 app. If it is not running, a send fails within half a second the first
-  time and instantly after that, and the program carries on. Start the viewer later and images arrive again.
+- The **Visual Debug Viewer** is a separate Qt 6 app. If it is not running, a send fails within half a
+  second the first time and instantly after that, and the program carries on. Start the viewer later and
+  images arrive again.
 - The message is a small **JSON header** that describes the image, followed by the **raw pixels**. New
   fields can be added without breaking older viewers. See the [wire format](docs/wire-format.md).
 - The viewer listens on **this machine only** unless told otherwise.
@@ -44,7 +45,7 @@ From a clone of this repository, with [Homebrew](https://brew.sh) installed:
 brew install cmake ninja pkgconf qt opencv zeromq cppzmq nlohmann-json googletest
 cmake --preset debug
 cmake --build --preset debug
-open build/debug/apps/image_processing/image_processing.app
+open build/debug/apps/viewer/visual_debug_viewer.app
 build/debug/examples/pipeline_demo/pipeline_demo
 ```
 
@@ -63,24 +64,32 @@ Run these from the repository root. The [build guide](docs/build-guide.md) and t
 ```sh
 cmake --preset debug                    # configure; once, or after changing a CMakeLists.txt
 cmake --build --preset debug            # build everything into build/debug
-ctest --preset debug                    # all 388 tests, about 45 seconds
+ctest --preset debug                    # all 395 tests, about 50 seconds
 ctest --preset debug -R ClientServer    # only the tests whose name matches
-```
 
-Swap `debug` for `release`, or for `asan` to run the same tests under AddressSanitizer and
-UndefinedBehaviorSanitizer.
+cmake --preset release                  # an optimised build, into build/release
+cmake --build --preset release
+ctest --preset release
+
+cmake --preset asan                     # Debug with AddressSanitizer and UndefinedBehaviorSanitizer
+cmake --build --preset asan             # into build/asan
+ctest --preset asan                     # the same tests under the sanitizers, about a minute
+```
 
 ### Run the programs
 
+Each preset puts the programs in its own folder: for the release build, write `build/release` where these
+commands say `build/debug`.
+
 ```sh
-# The viewer. Double-clicking image_processing.app in Finder works too.
-open build/debug/apps/image_processing/image_processing.app
+# The Visual Debug Viewer. Double-clicking visual_debug_viewer.app in Finder works too.
+open build/debug/apps/viewer/visual_debug_viewer.app
 
 # An OpenCV pipeline that sends each of its ten stages; give it a path to use your own image
 build/debug/examples/pipeline_demo/pipeline_demo
 
-# The demo sender: click Open… to pick an image, then Send image
-open build/debug/apps/client/client.app
+# The Visual Debug Example Sender: click Open… to pick an image, then Send image
+open build/debug/apps/example_sender/visual_debug_example_sender.app
 
 # The smallest sender: three thresholded images
 build/debug/examples/minimal_sender/minimal_sender
@@ -89,22 +98,23 @@ build/debug/examples/minimal_sender/minimal_sender
 Senders started before the viewer's status bar says `Listening on [tcp://127.0.0.1:7139]` get
 `ViewerUnavailable` and carry on; later sends reach the viewer once it is up.
 
-![The demo sender after sending the viewer's own screenshot: Open, Send image and the Send to field along the top, the result in the status bar](docs/images/client.png)
+![The Visual Debug Example Sender after sending a photo: Open, Send image and the Send to field along the top, the result in the status bar](docs/images/example-sender.png)
 
 In the viewer, the mouse wheel zooms, dragging pans, a double-click fits the image to the window again,
 and hovering shows the original value of the pixel under the cursor. **File → Open…** adds an image file
 to the history and **File → Save As…** saves the displayed image. The sidebar renames, duplicates and
 deletes images (with undo), searches and sorts them; the status bar pauses or stops the viewer's server;
-the activity log records what arrived and what was refused; the history can be kept between sessions; and
-**View → Appearance** picks light or dark. The [user guide](docs/user-guide.md) covers each of these.
+the activity log records what arrived and what was refused; the history can be kept between sessions;
+**View → Appearance** picks light or dark; and **About** names the OpenCV and Qt versions it runs with. The
+[user guide](docs/user-guide.md) covers each of these.
 
 ```sh
 # A second viewer on another port, and a sender aimed at it
-open -n build/debug/apps/image_processing/image_processing.app --args --endpoint tcp://127.0.0.1:7140
+open -n build/debug/apps/viewer/visual_debug_viewer.app --args --endpoint tcp://127.0.0.1:7140
 build/debug/examples/pipeline_demo/pipeline_demo --endpoint tcp://127.0.0.1:7140
 
 # Run the viewer in the terminal to see its options, or its log as it runs
-build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_processing --help
+build/debug/apps/viewer/visual_debug_viewer.app/Contents/MacOS/visual_debug_viewer --help
 ```
 
 ### Build, test and debug in Qt Creator
@@ -112,15 +122,15 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 1. **File → Open File or Project…** and choose the top-level `CMakeLists.txt`.
 2. Tick the **Debug** preset and click **Configure Project**. Qt Creator uses the same `build/debug` folder
    as the command line, so either can build it.
-3. **⌘B** builds. Pick `image_processing` in the run target selector (the computer icon at the bottom left)
-   and press **⌘R** to run it.
+3. **⌘B** builds. Pick `visual_debug_viewer` in the run target selector (the computer icon at the bottom
+   left) and press **⌘R** to run it.
 4. **Tools → Tests → Run All Tests** runs every test; the results appear in the **Test Results** pane.
    Unlike `ctest`, Qt Creator runs all the tests of one test program in a single process. If one crashes in
    `ImageIO`, see the build guide's [Troubleshooting](docs/build-guide.md#troubleshooting).
 5. Click in the margin next to a line to set a breakpoint and press **⌘Y** to debug with LLDB. The first
    time, macOS may ask for your password to let the debugger attach.
 
-![Qt Creator after Run All Tests: 383 passes, grouped by test suite](docs/images/qt-creator-tests.png)
+![Qt Creator after Run All Tests: 389 passes, grouped by test suite](docs/images/qt-creator-tests.png)
 
 ## Documentation
 
@@ -144,7 +154,7 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 | C++ | pre-C++11 style: `0` for null, manual `new` and `delete` | C++20 |
 | Build | three qmake `.pro` files with hard-coded build paths | one CMake project with presets, warning-free under `-Wall -Wextra -Wpedantic` |
 | Message | a hand-packed binary header | a JSON header plus a pixel frame, validated field by field |
-| Tests | none | 383 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
+| Tests | none | 389 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
 | Documentation | one paragraph in `readme.txt` | this README, four guides and a decision record |
 
 ### Defects found in the 2013 code, and what fixed them
@@ -175,8 +185,9 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 Many of the thesis code's names were Slovak. The client lived in `klient/`, the icons in `Obrazky.qrc`
 under the prefix `/zakladne` ("basic"), the image label was `lbl_obrazok`, an image's name, width and
 height were `nazov`, `sirka` and `vyska`, and every sent image was called `môj obrázok č.1` ("my picture
-no. 1"). Now it is `apps/client/`, `resources.qrc` with `/icons`, `previewLabel`, the JSON
-fields `name`, `cols` and `rows`, and images are named after their file: `photo.png #1`.
+no. 1"). Now the client is the Visual Debug Example Sender in `apps/example_sender/`, with `resources.qrc`
+under `/icons`, `previewLabel`, the JSON fields `name`, `cols` and `rows`, and images named after their
+file: `photo.png #1`.
 
 ## Project layout
 
@@ -186,16 +197,16 @@ Image_processing/
 │   ├── visual_debug/      the sender library and the viewer's server (no Qt)
 │   └── viewer_core/       the viewer's logic: display, history, pixel readout, zoom (no Qt)
 ├── apps/
-│   ├── image_processing/  the viewer (Qt 6)
-│   ├── client/            a demo sender (Qt 6)
+│   ├── viewer/            the Visual Debug Viewer (Qt 6)
+│   ├── example_sender/    the Visual Debug Example Sender (Qt 6)
 │   └── qt_common/         Qt helpers shared by both apps
 ├── examples/
 │   ├── pipeline_demo/     an OpenCV pipeline that sends every stage
 │   └── minimal_sender/    the smallest use of sendImage()
 ├── tests/                 GoogleTest tests for all of the above
-├── resources/icons/       application icons
+├── resources/icons/       the apps' icons
 ├── docs/                  guides, wire format, architecture, decision records
-├── cmake/                 warning and sanitizer settings
+├── cmake/                 warning, sanitizer and macOS icon settings
 ├── CMakeLists.txt
 └── CMakePresets.json      debug, release and asan builds
 ```
