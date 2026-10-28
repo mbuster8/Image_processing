@@ -1,5 +1,7 @@
 #pragma once
 
+#include "send_counter.h"
+
 #include "visual_debug/image_sender.h"
 
 #include <QMainWindow>
@@ -8,7 +10,11 @@
 
 #include <opencv2/core/mat.hpp>
 
+#include <functional>
 #include <memory>
+#include <string>
+
+class QLineEdit;
 
 namespace Ui {
 class MainWindow;
@@ -20,8 +26,14 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(visual_debug::ImageSender& sender, QWidget* parent = nullptr);
+    // Makes the sender for an endpoint; called again whenever the endpoint field changes.
+    using SenderFactory =
+        std::function<std::unique_ptr<visual_debug::ImageSender>(const std::string& endpoint)>;
+
+    explicit MainWindow(SenderFactory makeSender, QWidget* parent = nullptr);
     ~MainWindow() override;
+
+    void openImage(const QString& path);
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
@@ -30,11 +42,15 @@ private:
     void openFile();
     void sendImage();
     void showPreview();
+    void markEndpointInvalid(bool invalid);
 
     std::unique_ptr<Ui::MainWindow> m_ui;
-    visual_debug::ImageSender& m_sender;
-    cv::Mat m_image; // as read, sent unchanged
+    QLineEdit* m_endpointField;
+    SenderFactory m_makeSender;
+    std::unique_ptr<visual_debug::ImageSender> m_sender;
+    std::string m_senderEndpoint; // what m_sender sends to
+    cv::Mat m_image;              // as read, sent unchanged
     QString m_fileName;
     QPixmap m_preview;
-    int m_sentCount = 0;
+    SendCounter m_counter;
 };

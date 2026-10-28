@@ -14,41 +14,13 @@
    <string>Image Processing Client</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="mainLayout">
-    <item>
-     <layout class="QVBoxLayout" name="buttonLayout">
-      <item>
-       <widget class="QPushButton" name="openButton">
-        <property name="text">
-         <string>Open…</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="sendButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Send image</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="buttonSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
+   <layout class="QVBoxLayout" name="mainLayout">
     <item>
      <widget class="QLabel" name="previewLabel">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
         <horstretch>1</horstretch>
-        <verstretch>0</verstretch>
+        <verstretch>1</verstretch>
        </sizepolicy>
       </property>
       <property name="minimumSize">
@@ -67,7 +39,34 @@
     </item>
    </layout>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+   </widget>
+   <addaction name="menuView"/>
+  </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open…</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSend">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Send image</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

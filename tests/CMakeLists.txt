@@ -75,4 +75,17 @@ if(IMAGE_PROCESSING_BUILD_QT_APPS)
             opencv_imgcodecs
             Qt6::Test
             GTest::gtest)
+    # A program of its own: the client and the viewer each have a main_window.h.
+    image_processing_add_test_executable(client_ui_tests
+        SOURCES
+            image_processing/test_main.cpp
+            client/main_window_test.cpp
+            client/send_counter_test.cpp
+        LIBRARIES
+            client_ui
+            opencv_imgcodecs
+            Qt6::Test
+            GTest::gtest)
+    # The shared Qt test helpers: test_main.cpp's settings and control_checks.h.
+    target_include_directories(client_ui_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/image_processing)
 endif()
