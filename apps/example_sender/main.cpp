@@ -11,7 +11,7 @@
 
 int main(int argc, char* argv[]) {
     QApplication application(argc, argv);
-    qt_common::setApplicationIdentity(QStringLiteral("Image Processing Client"));
+    qt_common::setApplicationIdentity(QLatin1String(qt_common::kExampleSenderName));
     qt_common::applyAppearance(qt_common::storedAppearance());
 
     MainWindow window([](const std::string& endpoint) -> std::unique_ptr<visual_debug::ImageSender> {

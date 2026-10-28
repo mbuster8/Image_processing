@@ -17,13 +17,13 @@ const QString kAppearanceKey = QStringLiteral("appearance");
 // code under test, so the test pins the place both programs read.
 void setSharedValue(const QString& value) {
     QSettings(QSettings::defaultFormat(), QSettings::UserScope, QStringLiteral("proximasus.com"),
-              QStringLiteral("Image Processing"))
+              QStringLiteral("Visual Debug Viewer"))
         .setValue(kAppearanceKey, value);
 }
 
 QString sharedValue() {
     return QSettings(QSettings::defaultFormat(), QSettings::UserScope, QStringLiteral("proximasus.com"),
-                     QStringLiteral("Image Processing"))
+                     QStringLiteral("Visual Debug Viewer"))
         .value(kAppearanceKey)
         .toString();
 }
@@ -81,7 +81,7 @@ TEST_F(Appearance, UnrecognisedValueReadsAsSystem) {
 
 TEST_F(Appearance, SharedBetweenApps) {
     const QString name = QCoreApplication::applicationName();
-    QCoreApplication::setApplicationName(QStringLiteral("Image Processing Client"));
+    QCoreApplication::setApplicationName(QStringLiteral("Visual Debug Example Sender"));
     qt_common::storeAppearance(qt_common::Appearance::Dark);
     QCoreApplication::setApplicationName(name);
 
@@ -109,7 +109,8 @@ TEST_F(Appearance, MenuTicksStoredChoiceAndStoresSelection) {
     EXPECT_EQ(checkedTexts(*menu), QStringList{QStringLiteral("Light")});
 }
 
-// The client and the viewer share the choice: whichever was not used to make it catches up when activated.
+// The example sender and the viewer share the choice: whichever was not used to make it catches up when
+// activated.
 TEST_F(Appearance, MenuFollowsAnotherAppsChoiceOnActivation) {
     if (!qt_common::canChooseAppearance()) {
         GTEST_SKIP() << "View > Appearance needs Qt 6.8";

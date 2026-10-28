@@ -70,7 +70,7 @@ public:
     EnvironmentEndpoint& operator=(const EnvironmentEndpoint&) = delete;
 };
 
-const QString kRememberedKey = QStringLiteral("client/endpoint");
+const QString kRememberedKey = QStringLiteral("sender/endpoint");
 
 QLineEdit* endpointFieldOf(MainWindow& window) {
     return window.findChild<QLineEdit*>(QStringLiteral("endpointField"));
@@ -91,7 +91,14 @@ QString writeImage(const QTemporaryDir& directory, const QString& fileName) {
     return path;
 }
 
-TEST(ClientWindow, StartsFromTheDefaultEndpoint) {
+TEST(ExampleSenderWindow, TitleNamesTheApp) {
+    FakeSenders senders;
+    MainWindow window(senders.factory());
+
+    EXPECT_EQ(window.windowTitle(), QStringLiteral("Visual Debug Example Sender"));
+}
+
+TEST(ExampleSenderWindow, StartsFromTheDefaultEndpoint) {
     FakeSenders senders;
     MainWindow window(senders.factory());
 
@@ -100,7 +107,7 @@ TEST(ClientWindow, StartsFromTheDefaultEndpoint) {
                                                                  visual_debug::kDefaultEndpoint.size()));
 }
 
-TEST(ClientWindow, StartsFromTheRememberedEndpoint) {
+TEST(ExampleSenderWindow, StartsFromTheRememberedEndpoint) {
     QSettings().setValue(kRememberedKey, QStringLiteral("tcp://127.0.0.1:7150"));
     FakeSenders senders;
     MainWindow window(senders.factory());
@@ -108,7 +115,7 @@ TEST(ClientWindow, StartsFromTheRememberedEndpoint) {
     EXPECT_EQ(endpointFieldOf(window)->text(), QStringLiteral("tcp://127.0.0.1:7150"));
 }
 
-TEST(ClientWindow, EnvironmentEndpointWinsOverTheRememberedOne) {
+TEST(ExampleSenderWindow, EnvironmentEndpointWinsOverTheRememberedOne) {
     QSettings().setValue(kRememberedKey, QStringLiteral("tcp://127.0.0.1:7150"));
     const EnvironmentEndpoint environment("tcp://127.0.0.1:7160");
     FakeSenders senders;
@@ -118,7 +125,7 @@ TEST(ClientWindow, EnvironmentEndpointWinsOverTheRememberedOne) {
 }
 
 // The field sits in the toolbar, beside Open and Send image.
-TEST(ClientWindow, EndpointFieldIsInTheToolbar) {
+TEST(ExampleSenderWindow, EndpointFieldIsInTheToolbar) {
     FakeSenders senders;
     MainWindow window(senders.factory());
 
@@ -127,7 +134,7 @@ TEST(ClientWindow, EndpointFieldIsInTheToolbar) {
 }
 
 // Open and Send image show the shared outline icons beside their text.
-TEST(ClientWindow, ToolbarShowsIconsBesideText) {
+TEST(ExampleSenderWindow, ToolbarShowsIconsBesideText) {
     FakeSenders senders;
     MainWindow window(senders.factory());
     QToolButton* open = buttonOf(window, QStringLiteral("openButton"));
@@ -145,7 +152,7 @@ TEST(ClientWindow, ToolbarShowsIconsBesideText) {
 
 // Large enough to see (spec H1), in the regular font even where the platform gives tool buttons a smaller
 // one.
-TEST(ClientWindow, ToolbarIsLargeEnoughToSee) {
+TEST(ExampleSenderWindow, ToolbarIsLargeEnoughToSee) {
     const test_support::SmallerClassFonts smaller;
     FakeSenders senders;
     MainWindow window(senders.factory());
@@ -160,7 +167,7 @@ TEST(ClientWindow, ToolbarIsLargeEnoughToSee) {
 }
 
 // The toolbar sits on the panel grey, with a divider line along its bottom (spec H3, H8).
-TEST(ClientWindow, ToolbarSitsOnThePanelGrey) {
+TEST(ExampleSenderWindow, ToolbarSitsOnThePanelGrey) {
     FakeSenders senders;
     MainWindow window(senders.factory());
     window.show();
@@ -176,7 +183,7 @@ TEST(ClientWindow, ToolbarSitsOnThePanelGrey) {
               toolBar->mapTo(&window, QPoint(0, toolBar->height())).y());
 }
 
-TEST(ClientWindow, SendsToTheFieldsEndpointAndRemembersIt) {
+TEST(ExampleSenderWindow, SendsToTheFieldsEndpointAndRemembersIt) {
     const QTemporaryDir directory;
     FakeSenders senders;
     MainWindow window(senders.factory());
@@ -197,7 +204,7 @@ TEST(ClientWindow, SendsToTheFieldsEndpointAndRemembersIt) {
 }
 
 // An unusable endpoint is marked and not remembered; editing the field clears the mark.
-TEST(ClientWindow, MarksAnUnusableEndpoint) {
+TEST(ExampleSenderWindow, MarksAnUnusableEndpoint) {
     const QTemporaryDir directory;
     FakeSenders senders;
     senders.result = SendResult::InvalidEndpoint;
@@ -217,7 +224,7 @@ TEST(ClientWindow, MarksAnUnusableEndpoint) {
     EXPECT_FALSE(field->property("invalid").toBool());
 }
 
-TEST(ClientWindow, ReportsOpenedFilesInBrackets) {
+TEST(ExampleSenderWindow, ReportsOpenedFilesInBrackets) {
     const QTemporaryDir directory;
     FakeSenders senders;
     MainWindow window(senders.factory());

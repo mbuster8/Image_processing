@@ -74,8 +74,8 @@ QString viewerWindowTitle(const QString& imageName, const QString& endpoint) {
     const QString tcpScheme = QStringLiteral("tcp://");
     const QString shownEndpoint = endpoint.startsWith(tcpScheme) ? endpoint.mid(tcpScheme.size()) : endpoint;
     return imageName.isEmpty()
-               ? QCoreApplication::translate("MainWindow", "Image Processing — %1").arg(shownEndpoint)
-               : QCoreApplication::translate("MainWindow", "Image Processing — %1 — %2")
+               ? QCoreApplication::translate("MainWindow", "Visual Debug Viewer — %1").arg(shownEndpoint)
+               : QCoreApplication::translate("MainWindow", "Visual Debug Viewer — %1 — %2")
                      .arg(imageName, shownEndpoint);
 }
 

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Image Processing</string>
+   <string>Visual Debug Viewer</string>
   </property>
   <widget class="QMenuBar" name="menuBar">
    <widget class="QMenu" name="menuFile">

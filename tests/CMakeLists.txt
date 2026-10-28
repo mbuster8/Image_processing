@@ -47,45 +47,55 @@ if(IMAGE_PROCESSING_BUILD_EXAMPLES)
             GTest::gtest_main)
 endif()
 
-# The thin Qt helpers, with an offscreen QApplication; the windows themselves are checked end to end.
+# The Qt code, with an offscreen QApplication. Every Qt test program uses qt_common/test_main.cpp, which keeps
+# the tests' settings apart from the owner's. The apps get a program each: both have a main_window.h.
 if(IMAGE_PROCESSING_BUILD_QT_APPS)
     find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
-    image_processing_add_test_executable(qt_ui_tests
+    image_processing_add_test_executable(qt_common_tests
         SOURCES
-            image_processing/test_main.cpp
-            image_processing/activity_log_panel_test.cpp
-            image_processing/activity_log_test.cpp
-            image_processing/appearance_test.cpp
-            image_processing/data_folder_test.cpp
-            image_processing/image_file_test.cpp
-            image_processing/image_info_bar_test.cpp
-            image_processing/image_sidebar_test.cpp
-            image_processing/image_store_test.cpp
-            image_processing/image_view_test.cpp
-            image_processing/main_window_test.cpp
-            image_processing/outline_icons_test.cpp
-            image_processing/qimage_conversion_test.cpp
-            image_processing/qt_image_sink_test.cpp
-            image_processing/server_controls_test.cpp
-            image_processing/shades_test.cpp
-            image_processing/storage_worker_test.cpp
-            image_processing/thumbnail_panel_test.cpp
+            qt_common/test_main.cpp
+            qt_common/appearance_test.cpp
+            qt_common/image_file_test.cpp
+            qt_common/outline_icons_test.cpp
+            qt_common/qimage_conversion_test.cpp
+            qt_common/shades_test.cpp
         LIBRARIES
-            image_processing_ui
+            qt_common
+            viewer_core::viewer_core
             opencv_imgcodecs
             Qt6::Test
             GTest::gtest)
-    # A program of its own: the client and the viewer each have a main_window.h.
-    image_processing_add_test_executable(client_ui_tests
+    image_processing_add_test_executable(viewer_ui_tests
         SOURCES
-            image_processing/test_main.cpp
-            client/main_window_test.cpp
-            client/send_counter_test.cpp
+            qt_common/test_main.cpp
+            viewer/activity_log_panel_test.cpp
+            viewer/activity_log_test.cpp
+            viewer/data_folder_test.cpp
+            viewer/image_info_bar_test.cpp
+            viewer/image_sidebar_test.cpp
+            viewer/image_store_test.cpp
+            viewer/image_view_test.cpp
+            viewer/main_window_test.cpp
+            viewer/qt_image_sink_test.cpp
+            viewer/server_controls_test.cpp
+            viewer/storage_worker_test.cpp
+            viewer/thumbnail_panel_test.cpp
         LIBRARIES
-            client_ui
+            viewer_ui
             opencv_imgcodecs
             Qt6::Test
             GTest::gtest)
-    # The shared Qt test helpers: test_main.cpp's settings and control_checks.h.
-    target_include_directories(client_ui_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/image_processing)
+    image_processing_add_test_executable(example_sender_ui_tests
+        SOURCES
+            qt_common/test_main.cpp
+            example_sender/main_window_test.cpp
+            example_sender/send_counter_test.cpp
+        LIBRARIES
+            example_sender_ui
+            opencv_imgcodecs
+            Qt6::Test
+            GTest::gtest)
+    # The shared Qt test helpers, such as palette_support.h and control_checks.h.
+    target_include_directories(viewer_ui_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/qt_common)
+    target_include_directories(example_sender_ui_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/qt_common)
 endif()

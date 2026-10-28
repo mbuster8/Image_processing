@@ -32,7 +32,7 @@ namespace Ui {
 class MainWindow;
 }
 
-// "Image Processing — <name> — <endpoint>", or without the name when it is empty. The endpoint loses its
+// "Visual Debug Viewer — <name> — <endpoint>", or without the name when it is empty. The endpoint loses its
 // "tcp://", and is always there so that several viewers can be told apart in the Dock and the Window menu.
 QString viewerWindowTitle(const QString& imageName, const QString& endpoint);
 

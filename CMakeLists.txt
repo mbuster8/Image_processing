@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(IMAGE_PROCESSING_BUILD_QT_APPS "Build the Qt 6 viewer and demo client" ON)
+option(IMAGE_PROCESSING_BUILD_QT_APPS "Build the Qt 6 viewer and example sender" ON)
 option(IMAGE_PROCESSING_BUILD_EXAMPLES "Build the command-line examples" ON)
 option(IMAGE_PROCESSING_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 option(IMAGE_PROCESSING_SANITIZERS "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)

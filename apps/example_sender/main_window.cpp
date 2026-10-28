@@ -29,7 +29,7 @@
 
 namespace {
 
-const QString kEndpointKey = QStringLiteral("client/endpoint");
+const QString kEndpointKey = QStringLiteral("sender/endpoint");
 // As around the viewer sidebar's search row.
 constexpr int kCommandBarMargin = 6;
 constexpr int kCommandBarSpacing = 4;

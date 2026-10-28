@@ -4,8 +4,8 @@ class QMenu;
 
 namespace qt_common {
 
-// Whether the programs follow the system's light or dark appearance, or keep one. The viewer and the client
-// share the choice: it lives in the viewer's settings, whichever program makes it.
+// Whether the programs follow the system's light or dark appearance, or keep one. The viewer and the example
+// sender share the choice: it lives in the viewer's settings, whichever program makes it.
 enum class Appearance { System, Light, Dark };
 
 bool canChooseAppearance();    // true when built with Qt 6.8 or newer

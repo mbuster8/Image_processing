@@ -29,7 +29,7 @@ constexpr std::array kChoices{Choice{Appearance::System, "system", QT_TRANSLATE_
                               Choice{Appearance::Light, "light", QT_TRANSLATE_NOOP("Appearance", "Light")},
                               Choice{Appearance::Dark, "dark", QT_TRANSLATE_NOOP("Appearance", "Dark")}};
 
-// The viewer's settings, whichever program runs: QSettings() would name the client's own.
+// The viewer's settings, whichever program runs: QSettings() would name the example sender's own.
 std::unique_ptr<QSettings> sharedSettings() {
     return std::make_unique<QSettings>(QSettings::defaultFormat(), QSettings::UserScope,
                                        QLatin1String(kOrganisationDomain), QLatin1String(kViewerName));

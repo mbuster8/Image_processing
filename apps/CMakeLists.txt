@@ -6,5 +6,5 @@ qt_standard_project_setup()
 set(CMAKE_AUTORCC ON)
 
 add_subdirectory(qt_common)
-add_subdirectory(image_processing)
-add_subdirectory(client)
+add_subdirectory(viewer)
+add_subdirectory(example_sender)

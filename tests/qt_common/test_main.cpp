@@ -11,7 +11,7 @@ namespace {
 
 // Every test starts from the defaults, as on a first start, whether ctest runs it alone or the binary runs
 // them all in one process: a sort or a width one test chose never reaches the next. The viewer's settings
-// hold the appearance the client shares.
+// hold the appearance the example sender shares.
 class ClearSettingsBeforeEachTest : public testing::EmptyTestEventListener {
     void OnTestStart(const testing::TestInfo& /*test*/) override {
         QSettings().clear();
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsFolder.path());
     QApplication application(argc, argv);
-    qt_common::setApplicationIdentity(QStringLiteral("Image Processing Tests"));
+    qt_common::setApplicationIdentity(QStringLiteral("Visual Debug Tests"));
     testing::UnitTest::GetInstance()->listeners().Append(new ClearSettingsBeforeEachTest);
     return RUN_ALL_TESTS();
 }

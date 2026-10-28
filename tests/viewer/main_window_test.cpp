@@ -157,15 +157,15 @@ TEST(MainWindowTest, SidebarFillsItsSplitterSection) {
 
 TEST(MainWindowTest, WindowTitleNamesImageAndEndpoint) {
     EXPECT_EQ(viewerWindowTitle(QStringLiteral("Sobel X"), QStringLiteral("tcp://127.0.0.1:7139")),
-              QString::fromUtf8("Image Processing — Sobel X — 127.0.0.1:7139"));
+              QString::fromUtf8("Visual Debug Viewer — Sobel X — 127.0.0.1:7139"));
     EXPECT_EQ(viewerWindowTitle(QString(), QStringLiteral("tcp://127.0.0.1:7140")),
-              QString::fromUtf8("Image Processing — 127.0.0.1:7140"));
+              QString::fromUtf8("Visual Debug Viewer — 127.0.0.1:7140"));
 }
 
 TEST(MainWindowTest, TitleShowsTheEndpointBeforeAnyImage) {
     const auto window = makeTestWindow(QStringLiteral("tcp://127.0.0.1:7141"));
 
-    EXPECT_EQ(window->windowTitle(), QString::fromUtf8("Image Processing — 127.0.0.1:7141"));
+    EXPECT_EQ(window->windowTitle(), QString::fromUtf8("Visual Debug Viewer — 127.0.0.1:7141"));
 }
 
 TEST(MainWindowTest, PixelReadoutHasALeftMargin) {
