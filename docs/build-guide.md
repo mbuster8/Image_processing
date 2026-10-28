@@ -72,11 +72,12 @@ or library cannot break the build, but a new warning from project code should be
 | `qt_common` | Qt helpers shared by both apps | `apps/qt_common/libqt_common.a` |
 | `image_processing_ui` | The viewer's windows, as a library the Qt tests link | `apps/image_processing/libimage_processing_ui.a` |
 | `image_processing` | **The viewer** | `apps/image_processing/image_processing.app` |
+| `client_ui` | The client's window, as a library its tests link | `apps/client/libclient_ui.a` |
 | `client` | The Qt demo sender | `apps/client/client.app` |
 | `pipeline` | The demo's OpenCV stages | `examples/pipeline_demo/libpipeline.a` |
 | `pipeline_demo` | Command-line demo: an OpenCV pipeline that sends every stage | `examples/pipeline_demo/pipeline_demo` |
 | `minimal_sender` | The smallest use of `sendImage` | `examples/minimal_sender/minimal_sender` |
-| `visual_debug_tests`, `viewer_core_tests`, `qt_ui_tests`, `pipeline_tests` | GoogleTest executables | `tests/` |
+| `visual_debug_tests`, `viewer_core_tests`, `qt_ui_tests`, `client_ui_tests`, `pipeline_tests` | GoogleTest executables | `tests/` |
 
 To build one target: `cmake --build --preset debug --target pipeline_demo`.
 
@@ -97,6 +98,7 @@ and build into a separate folder:
 ```sh
 cmake --preset debug -B build/no-qt -DIMAGE_PROCESSING_BUILD_QT_APPS=OFF
 cmake --build build/no-qt
+ctest --test-dir build/no-qt               # the 170 tests that need no Qt
 ```
 
 CMake then does not look for Qt at all; both libraries, both examples and their tests still build.
@@ -104,15 +106,21 @@ CMake then does not look for Qt at all; both libraries, both examples and their 
 ## Running the tests
 
 ```sh
-ctest --preset debug                       # everything (139 tests, about 6 seconds)
+ctest --preset debug                       # everything (388 tests, about 45 seconds)
 ctest --preset debug -R WireFormat         # only tests whose name matches a regular expression
 ctest --preset debug -R "Client|Server"
-ctest --preset asan                        # the same tests under the sanitizers
+ctest --preset asan                        # the same tests under the sanitizers (about a minute)
+ctest --preset debug -L whole              # only the whole-program runs
+ctest --preset debug -LE whole             # everything except them
 ```
 
 Every GoogleTest case is its own CTest test, so `-R` takes test names such as
 `ClientServer.RecoversAfterServerStarts`. A failing test prints its output. Each test has a 60-second
 timeout, so a hung socket fails instead of stalling the run.
+
+Each test program also runs once as a whole, as `<program> (whole program)` with the label `whole`. That is
+how Qt Creator and other IDEs run it, and state one test leaves behind (a changed global setting, say) breaks
+the next test only when the two share a process.
 
 The Qt tests create an offscreen `QApplication`, so they open no windows and also run without a display.
 
@@ -135,7 +143,8 @@ by hand. If a menu has moved in your version, the presets above still work from 
 5. Tests: open the **Test Results** pane (**View → Output → Test Results**), then **Tools → Tests → Run
    All Tests**. Qt Creator runs each GoogleTest program itself and lists the results by test suite. Unlike
    `ctest`, it runs all the tests of one program in a single process, so a test that leaves global state
-   behind (or crashes) affects the tests after it, and the pane reports the program as crashed.
+   behind (or crashes) affects the tests after it, and the pane reports the program as crashed. If
+   `qt_ui_tests` crashes in `ThumbnailPanel`, see the `ImageIO` entry under Troubleshooting.
 6. Debugging: click in the margin of `apps/image_processing/image_view.cpp` next to the first line of
    `ImageView::wheelEvent` to set a breakpoint, start with **Debug → Start Debugging** (⌘Y), and scroll
    the mouse wheel over an image in the viewer. Qt Creator stops at the breakpoint with LLDB.
@@ -146,6 +155,15 @@ by hand. If a menu has moved in your version, the presets above still work from 
 Finder get launchd's minimal `PATH`, which does not include `/opt/homebrew/bin`. The presets add it to
 `PATH` themselves, so this only happens when configuring without a preset. Use a preset, or start Qt
 Creator from a terminal.
+
+**A test or the viewer crashes in `ImageIO` (`SIGBUS`) only when started from Qt Creator.** Qt Creator's
+run setting **Add build library search path to DYLD_LIBRARY_PATH and DYLD_FRAMEWORK_PATH** puts
+`/opt/homebrew/lib`, where Homebrew's OpenCV, ZeroMQ and Qt live, on `DYLD_LIBRARY_PATH`. macOS then loads
+Homebrew's `libpng` in place of its own, and drawing a colour emoji (an image name such as `ž😀`, as in
+`ThumbnailPanel.LongNameKeepsCellSize`) crashes. In **Projects → Run Settings**, pick each run configuration
+in turn (the viewer, the client and each test program) and untick that setting, just below **Run in
+terminal**: the executables find their libraries through their rpath and need no search path. `ctest` and
+Finder never set it.
 
 **`Could NOT find WrapVulkanHeaders` during configure.** Qt looks for optional Vulkan support. Harmless;
 nothing in this project uses Vulkan.
@@ -158,6 +176,12 @@ line when a file cannot be read. The program reports the failure itself as well.
 libraries are not built with AddressSanitizer, which makes this check report false positives.
 `cmake/sanitizer_defaults.cpp` turns that one check off for every executable in the `asan` build; leave
 it in place.
+
+**`Operation not permitted` while building under `~/Documents`.** Antivirus folder protection, such as
+Bitdefender's Safe Files, which guards `~/Documents`, blocks a tool it does not trust from writing there. The
+error names the file, not the antivirus. Add the tool to the antivirus's trusted applications only if its
+path is in Homebrew (`/opt/homebrew`), the Xcode Command Line Tools (`/Library/Developer/CommandLineTools`)
+or this project's `build` folder; otherwise, find out what the tool is first.
 
 **`ld: symbol(s) not found` after adding a source file.** Add the file to the target's `add_library` or
 `add_executable` list in its `CMakeLists.txt`; CMake does not pick up new files by itself.

@@ -10,7 +10,7 @@ floating point.
 visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer is running
 ```
 
-![The viewer showing the ten stages of pipeline_demo, newest at the top of the thumbnail list](docs/images/viewer.png)
+![The viewer showing the ten stages of pipeline_demo, newest at the top of the sidebar, with the original 16-bit values of the pixel under the cursor in the status bar](docs/images/viewer.png)
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
 brought it back: ported to Qt 6 and OpenCV 5, restructured, tested and documented. What changed, and why,
@@ -49,7 +49,7 @@ build/debug/examples/pipeline_demo/pipeline_demo
 ```
 
 `open` returns before the viewer is ready, so wait until its status bar says
-`Listening on tcp://127.0.0.1:7139` before running the last command. That command runs an OpenCV pipeline
+`Listening on [tcp://127.0.0.1:7139]` before running the last command. That command runs an OpenCV pipeline
 and sends ten images to the viewer: colour, alpha, greyscale, signed 16-bit, 32- and 64-bit floating
 point, a cropped region and 16-bit colour. Hover over them to see the original values.
 
@@ -63,7 +63,7 @@ Run these from the repository root. The [build guide](docs/build-guide.md) and t
 ```sh
 cmake --preset debug                    # configure; once, or after changing a CMakeLists.txt
 cmake --build --preset debug            # build everything into build/debug
-ctest --preset debug                    # all 139 tests, about 6 seconds
+ctest --preset debug                    # all 388 tests, about 45 seconds
 ctest --preset debug -R ClientServer    # only the tests whose name matches
 ```
 
@@ -86,12 +86,17 @@ open build/debug/apps/client/client.app
 build/debug/examples/minimal_sender/minimal_sender
 ```
 
-Senders started before the viewer's status bar says `Listening on tcp://127.0.0.1:7139` get
+Senders started before the viewer's status bar says `Listening on [tcp://127.0.0.1:7139]` get
 `ViewerUnavailable` and carry on; later sends reach the viewer once it is up.
+
+![The demo sender after sending the viewer's own screenshot: Open, Send image and the Send to field along the top, the result in the status bar](docs/images/client.png)
 
 In the viewer, the mouse wheel zooms, dragging pans, a double-click fits the image to the window again,
 and hovering shows the original value of the pixel under the cursor. **File → Open…** adds an image file
-to the history and **File → Save As…** saves the displayed image.
+to the history and **File → Save As…** saves the displayed image. The sidebar renames, duplicates and
+deletes images (with undo), searches and sorts them; the status bar pauses or stops the viewer's server;
+the activity log records what arrived and what was refused; the history can be kept between sessions; and
+**View → Appearance** picks light or dark. The [user guide](docs/user-guide.md) covers each of these.
 
 ```sh
 # A second viewer on another port, and a sender aimed at it
@@ -110,11 +115,12 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 3. **⌘B** builds. Pick `image_processing` in the run target selector (the computer icon at the bottom left)
    and press **⌘R** to run it.
 4. **Tools → Tests → Run All Tests** runs every test; the results appear in the **Test Results** pane.
-   Unlike `ctest`, Qt Creator runs all the tests of one test program in a single process.
+   Unlike `ctest`, Qt Creator runs all the tests of one test program in a single process. If one crashes in
+   `ImageIO`, see the build guide's [Troubleshooting](docs/build-guide.md#troubleshooting).
 5. Click in the margin next to a line to set a breakpoint and press **⌘Y** to debug with LLDB. The first
    time, macOS may ask for your password to let the debugger attach.
 
-![Qt Creator after Run All Tests: 139 passes, grouped by test suite](docs/images/qt-creator-tests.png)
+![Qt Creator after Run All Tests: 383 passes, grouped by test suite](docs/images/qt-creator-tests.png)
 
 ## Documentation
 
@@ -138,7 +144,7 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 | C++ | pre-C++11 style: `0` for null, manual `new` and `delete` | C++20 |
 | Build | three qmake `.pro` files with hard-coded build paths | one CMake project with presets, warning-free under `-Wall -Wextra -Wpedantic` |
 | Message | a hand-packed binary header | a JSON header plus a pixel frame, validated field by field |
-| Tests | none | 139 GoogleTest tests, also run under AddressSanitizer and UndefinedBehaviorSanitizer |
+| Tests | none | 383 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
 | Documentation | one paragraph in `readme.txt` | this README, four guides and a decision record |
 
 ### Defects found in the 2013 code, and what fixed them

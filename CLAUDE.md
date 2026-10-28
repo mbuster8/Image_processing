@@ -34,7 +34,7 @@ Binaries land in `build/<preset>/`: `apps/image_processing/image_processing.app`
 
 `libs/visual_debug` (transport, no Qt) · `libs/viewer_core` (viewer logic, no Qt) · `apps/image_processing`
 (viewer) · `apps/client` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender}` ·
-`tests/{visual_debug,viewer_core,image_processing,examples}` · `cmake/` (warnings, sanitizers).
+`tests/{visual_debug,viewer_core,image_processing,client,examples}` · `cmake/` (warnings, sanitizers).
 
 ## Rules that keep it working
 
@@ -54,6 +54,9 @@ Binaries land in `build/<preset>/`: `apps/image_processing/image_processing.app`
   (MSVC gets `/utf-8`); OpenCV API must also exist in 4.x (OpenCV 5 moved some headers: guard them with
   `__has_include`).
 - **Warnings:** zero from project code under `-Wall -Wextra -Wpedantic`.
+- **UI tests run offscreen in the Fusion style**, so they cannot see macOS drawing (a `QToolBar`'s buttons
+  lose their frames) or how a live appearance switch reaches child widgets (only as `PaletteChange`). Check
+  such changes in the running app too.
 
 ## Conventions
 

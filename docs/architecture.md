@@ -44,9 +44,9 @@ flowchart LR
 |---|---|
 | `libs/visual_debug` | Everything both ends of the channel share. `wire_format`: encodes an image into the two frames and decodes them back, validating everything and never throwing. `ImageSender`: the interface a host application depends on. `Client`: its ZeroMQ implementation. `sendImage()`: the one-line convenience call, using one process-wide `Client`. `Server`: the viewer's receive loop on its own thread. `ImageSink`: the interface through which the server hands images to whoever displays them. `endpoint`: the default endpoint and the loopback check. |
 | `libs/viewer_core` | The viewer's logic, free of any UI toolkit, so it is unit-tested without Qt. `toDisplayImage`: any supported image to 8-bit RGBA. `ImageHistory`: the bounded list of received images. `inspectPixel`: the readout text for one pixel of the original. `Viewport`: zoom and pan arithmetic. |
-| `apps/qt_common` | The little Qt code both apps need: `toQImage` (an RGBA `cv::Mat` to a `QImage`), and choosing and reading an image file. |
-| `apps/image_processing` | The viewer. `MainWindow` composes the parts; `ImageView` paints through a `Viewport`; `ThumbnailPanel` shows the history; `QtImageSink` moves images from the server thread to the UI thread. |
-| `apps/client` | A demo sender. Its window takes an `ImageSender&`, so it never knows which transport is behind it. |
+| `apps/qt_common` | The Qt code both apps need: `toQImage` (an RGBA `cv::Mat` to a `QImage`), choosing and reading an image file, `setApplicationIdentity` (the names `QSettings` and the standard paths use), `appearance` (the shared System, Light or Dark setting and its menu), `outline_icons` (the line icons, drawn in the palette's colours), `controls` (the shared control height, framed buttons and the regular font) and `shades` (the panel, hover, selection and divider greys, blended from the palette's window and text colours; `usePanelGrey`, which keeps a widget on the panel grey as the appearance changes; and `DividerLine`). |
+| `apps/image_processing` | The viewer. `MainWindow` composes the parts; `ImageView` paints through a `Viewport`; `ImageSidebar` holds the search field, the sort options and `ThumbnailPanel`, which shows the history: a list view over `ThumbnailModel` (the history's rows, in history order), seen through `ThumbnailFilterModel` (the names the search matches, in the chosen sort) and drawn by `ThumbnailDelegate`; `QtImageSink` moves images from the server thread to the UI thread; `ActivityLog` is the activity log (a list model, stored in the endpoint's `DataFolder`) and `ActivityLogPanel` shows it; `DividerSplitter` is a splitter whose handles draw a divider line and a grip; `ImageStore` keeps images in files, `StorageWorker` drives it on its own thread, and `StorageController` owns that thread and the restore for the window. |
+| `apps/client` | A demo sender. Its window takes a factory that makes an `ImageSender` for an endpoint, so it never knows which transport is behind it, and a new endpoint in its **Send to** field gets a new sender. |
 | `examples/pipeline_demo` | An ordinary OpenCV program that sends each stage of a pipeline. Its stages are a separate `pipeline` library so tests can check them. |
 | `examples/minimal_sender` | The smallest use of `sendImage`, compiled so the user guide's first example cannot go stale. |
 
@@ -86,8 +86,8 @@ sequenceDiagram
     Server->>Client: {"status":"ok"} (REP)
     Client->>Host: SendResult::Delivered
     UI->>UI: ImageHistory::add (display conversion)
-    UI->>UI: ThumbnailPanel::addImage, selects it
-    UI->>UI: ImageView shows it fitted
+    UI->>UI: ThumbnailPanel::addImage; selects it if listed
+    UI->>UI: ImageView shows it fitted (if selected)
     UI->>Sink: markHandled()
 ```
 
@@ -101,15 +101,49 @@ waits for painting.
 | The host application's thread | `Client::send` or `sendImage`. `sendImage` serialises calls from several threads behind a mutex; a `Client` is used from one thread at a time. |
 | The server's worker thread | `Server`'s receive loop: polls the socket every 100 ms, decodes, calls `ImageSink::onImageReceived`, replies. It checks a stop flag on each poll, so `stop()` returns promptly without killing the thread. |
 | The viewer's UI thread | Everything in `viewer_core` and all widgets. Nothing there needs a lock. |
+| The viewer's storage thread | `StorageWorker`, started by `StorageController`: writes, deletes and loads the images kept between sessions, and their index. Only a viewer with a data folder has one. |
 
 `ImageSink::onImageReceived` is called **on the worker thread**; every sink is responsible for getting the
 image to its own UI thread. `QtImageSink` emits a signal connected with `Qt::QueuedConnection`, so the slot
-runs on the UI thread.
+runs on the UI thread. The server stamps each decoded message with `receivedAt` (`std::chrono::system_clock`,
+on the worker thread, when decoding finishes), so the viewer's log shows when an image arrived, not when the
+UI got round to it.
+
+`ImageSink::onRequestRejected(reason)` is also called on the worker thread, once for every request the
+server answers with an error (malformed, `viewer busy`, `viewer paused`, `internal error`), just before the
+reply is sent. The reason is the reply's fixed ASCII text, never request bytes. It must return at once: the
+sender is waiting for the reply. The default does nothing.
+
+**Pausing.** `Server::setPaused(true)` keeps the port bound and answers every request with `viewer paused`,
+checked before anything else, so a paused viewer neither decodes nor offers images to its sink. Senders see
+`Rejected` rather than `ViewerUnavailable`, and images already handed to the UI are unaffected.
+`Server::stop()` releases the port, and `start()` binds it again.
 
 **Back-pressure.** At most eight images may wait for the UI. When all eight slots are taken, the worker
 thread waits up to 200 ms for the UI to call `markHandled()`. A burst from a fast sender is therefore
 slowed down to the UI's pace instead of being dropped, and only a UI stalled for longer makes the sender
 see `Rejected` ("viewer busy"). The 200 ms stays well inside the client's 500 ms reply timeout.
+
+**Rejections reach the log as counts.** `QtImageSink::onRequestRejected` only adds one to the count for its
+reason, under the sink's mutex, and emits `requestsRejected` when the first count appears. The UI, on the
+queued signal, takes every count at once with `takeRejections()` and logs one entry per reason, such as
+`Rejected 3 requests: [viewer paused]`. However many requests a sender floods the viewer with, the worker
+thread never waits on the UI for them and Qt's event queue holds at most one such signal; the counts are
+bounded by the handful of fixed reasons.
+
+**Storage.** `MainWindow` tells its `StorageController` every change to the history; the controller lives
+on the UI thread and passes each one to its `StorageWorker` as a queued call: store an image, delete one,
+rewrite the index, delete them all. A call carries a `cv::Mat` by reference count, and nothing modifies a
+history image after it is added, so the worker reads the pixels without a lock. Each call first re-reads the
+shared setting with `QSettings::sync()`; when another viewer has turned it off, the worker deletes this
+viewer's files instead of acting. At start-up the window listens first, then asks the controller to
+restore: the worker reads the stored images one at a time, newest first, and stops once the history's
+count or byte limit is reached, so it never reads what could not fit. Each image comes back as one queued
+signal; the controller hands it to the window, which adds it with `ImageHistory::addOldest`, below
+anything that arrived meanwhile. The index is not rewritten until loading has finished, so it cannot lose
+the images still being loaded. **Clear History** during a restore makes the controller discard the images
+still to come. Closing the window stops a restore at the next image, leaving the rest on disk, and waits
+for the calls already queued, so the newest image is never lost. The server thread is never involved.
 
 **Start-up order.** The viewer starts listening from its event loop, not in the window's constructor, so
 it never accepts images before its UI can take them. `MainWindow` declares its `QtImageSink` before its
@@ -160,7 +194,7 @@ only with fixed ASCII reasons, and survives any malformed message. Details are i
 - **A new sink**: implement `visual_debug::ImageSink` and pass it to a `Server`. A recording sink that
   writes images to disk, or a viewer in another toolkit, needs nothing else from the library.
 - **A new sender**: implement `visual_debug::ImageSender` (for example a shared-memory transport for very
-  large frames). Code written against `ImageSender&`, like the client's window, works with it unchanged.
+  large frames). Code written against `ImageSender`, like the client's window, works with it unchanged.
 - **A new pipeline stage**: add an entry to `buildPipeline()` in `examples/pipeline_demo/pipeline.cpp`;
   see the [user guide](user-guide.md#4-add-a-stage-to-pipeline_demo).
 - **Viewer features** (histograms, overlays, filters): put the logic in `viewer_core` with unit tests, and

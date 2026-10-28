@@ -23,15 +23,101 @@ default. Start the viewer first.
 open build/debug/apps/image_processing/image_processing.app
 ```
 
-The window opens maximised. The right-hand end of the status bar shows the connection state:
+The window opens maximised, with the keyboard on the sidebar's thumbnails. The sidebar, the status bar and
+the activity log sit on a grey a step off the image area's background, in the light and the dark appearance
+alike, and a thin line divides each from the image area; the dividers you can drag carry a small grip in the
+middle. Around the image is the window's own background colour, which also follows the appearance. The title
+names the image in the view and the endpoint without `tcp://`, for example
+`Image Processing — Sobel X — 127.0.0.1:7139`, so several viewers can be told apart in the Dock and the
+**Window** menu. The right-hand end of the status bar shows the server's buttons, a state dot and the
+connection state, then **Log ▴** at the far right (see [Activity log](#activity-log)):
 
-| Status | Meaning |
-|---|---|
-| `Starting…` | The window is up; the viewer starts listening as soon as its event loop runs. |
-| `Listening on tcp://127.0.0.1:7139` | Ready to receive. Senders started before this appears get `ViewerUnavailable`. |
-| `Listening on … (remote connections allowed)` | Started with `--allow-remote`; see the warning below. |
-| `Not listening: could not listen on tcp://127.0.0.1:7139: …` | Usually another viewer already uses the endpoint. This window still works for opening files. |
-| `Not listening: refusing to listen on …: not a loopback address, and remote connections are not allowed` | The endpoint is not on this machine; see `--allow-remote` below. |
+| Status | Dot | Buttons | Meaning |
+|---|---|---|---|
+| `Starting…` | grey ring | none | The window is up; the viewer starts listening as soon as its event loop runs. |
+| `Listening on [tcp://127.0.0.1:7139]` | green | Pause, Stop | Ready to receive. Senders started before this appears get `ViewerUnavailable`. |
+| `Listening on […] (remote connections allowed)` | green | Pause, Stop | Started with `--allow-remote`; see the warning below. |
+| `Paused: senders get [viewer paused]` | amber | Resume, Stop | The port stays taken; every image is refused. |
+| `Stopped: released [tcp://127.0.0.1:7139]` | grey ring | Start | The port is free; senders find no viewer. |
+| `Not listening: could not listen on [tcp://127.0.0.1:7139]: …` | grey ring | Try again | Usually another viewer already uses the endpoint. This window still works for opening files. |
+| `Not listening: refusing to listen on […]: not a loopback address, and remote connections are not allowed` | grey ring | Try again | The endpoint is not on this machine; see `--allow-remote` below. |
+
+### Server controls
+
+The buttons, and the **Server** menu's **Pause** (⌘P) and **Stop** (⌘.), whose titles change to Resume and
+Start, control the receiving side without closing the window. The two differ in what senders see:
+
+- **Pause** keeps the port and answers every image with the error `viewer paused`, so senders get
+  `Rejected` and go on running. Nothing new reaches the history until you resume. Use it to study the
+  images you have while a pipeline keeps sending.
+- **Stop** releases the port, so senders get `ViewerUnavailable`, exactly as if no viewer were running, and
+  another viewer can take the port. **Start** listens again on the same endpoint. With `--endpoint` and port
+  `*`, the new port can differ.
+
+Images already received are never dropped by either. **Try again** retries a start that failed, for example
+once the other viewer on the port has quit.
+
+### Activity log
+
+**Log ▴** in the status bar, or **View → Show Log** (⌘L), opens a panel under the image with what the
+viewer did, newest at the top; **Log ▾** closes it. Drag the divider above it to change its height. The
+viewer remembers whether the panel was open and how tall it was.
+
+Each entry has the local date and time to the microsecond (`2026-10-27 13:02:44.907113`), a mark for its
+kind (information, warning or error) and a text. The viewer logs:
+
+- the server's state: listening, paused, stopped, or not listening and why;
+- every received image, with its name, size, channels, depth and pixel bytes, timed when the server finished
+  decoding it rather than when the window showed it;
+- requests it refused, with the reason (`viewer busy`, `viewer paused`, a malformed message). Refusals that
+  arrive while the window is busy are combined: `Rejected 3 requests: [viewer paused]`;
+- opened and saved files, renames, duplicates, deletes, undos and copies, and files it could not open or save;
+- images dropped because the history is full: `Dropped the oldest image`.
+
+Names, file paths, endpoints and refusal reasons are written in square brackets, so a name with spaces reads
+plainly: `Renamed [old image.jpg] to [new image.jpg]`. Counts and sizes are not.
+
+While the panel is closed, the status bar shows the newest entry's time and text, greyed out. The list shows
+new entries at the top while it is scrolled to the top, and keeps the entries you are reading in place while
+you read further down. **Copy** puts the selected entries on the clipboard as lines of text, newest first, or
+every entry when none is selected. **Clear** empties the panel and the stored log, without asking.
+
+**Kept between sessions.** The newest 1000 entries are stored in `activity.log`, in a folder per endpoint under
+`~/Library/Application Support/Image Processing/` (such as `tcp_127.0.0.1_7139`), readable by you only, and
+loaded at the next start. Three cases keep the log in memory only, and the log says so at start:
+
+- a port of `*`, which changes on every start, so the folder could never be found again (an endpoint
+  without `://` has no folder either, and cannot be listened on);
+- a second viewer on the same endpoint, while the first one uses that endpoint's folder;
+- a folder that cannot be created or written, such as on a full disk.
+
+### Keeping images between sessions
+
+**History → Keep Images Between Sessions** keeps the history on disk, so a viewer you quit and start again
+on the same endpoint shows the same images, newest first, with their names (renames included), their
+received and modified times and their original pixels at every depth. It is off by default.
+
+- **What is stored, and where.** Each image is written as it arrives, as its original pixels, in the
+  endpoint's folder under `~/Library/Application Support/Image Processing/` (such as
+  `tcp_127.0.0.1_7139/images`), with a small index of the order, names and times. An image's file is deleted
+  when it leaves the history: deleted, or dropped because the history is full. **Undo Delete** writes it
+  again. The undo buffer itself is not stored.
+- **Starting again.** The viewer starts listening at once, then loads the stored images in the background
+  and adds them below any image that arrived meanwhile. Newer arrivals take priority for the history's
+  limits: a stored image that no longer fits is dropped and its file deleted. The log records
+  `Restored N images`, and how many were skipped as damaged or dropped.
+- **One setting for every viewer.** Turning it on writes this viewer's current history. Turning it off asks
+  `Delete the N stored images?`, where N counts the stored images of **every** endpoint, and then deletes
+  them all; other running viewers stop storing at once. Cancel leaves the setting on. A viewer that starts
+  with the setting off also deletes images a crashed viewer left behind, but never those of a viewer that
+  is still running.
+- **Privacy.** The folders and files are readable by your user account only, but they are **not
+  encrypted**: anyone with access to your account, or to a backup of it, can read the stored images.
+  Leave the setting off for images that must not reach the disk.
+- **Clear History…** deletes every image of this viewer, in memory and on disk, after asking. It cannot be
+  undone.
+- **Port `*`.** A viewer whose port is `*` gets a different port, and so a different folder, on every
+  start: it stores nothing and keeps its log in memory only.
 
 ### Options
 
@@ -68,12 +154,99 @@ build/debug/apps/image_processing/image_processing.app/Contents/MacOS/image_proc
 | Double-click | Fit the whole image to the window again. |
 | Hover | The status bar shows the pixel under the cursor (see below). Leaving the image clears it. |
 | Click a thumbnail | Show that image, fitted. The newest image is at the top and is shown as it arrives. |
+| ↑ and ↓ | With the sidebar focused, as it is when the window opens, show the image above or below in the list. |
 | **File → Open…** (⌘O) | Open an image file (PNG, JPEG, BMP, TIFF, WebP, PNM, or anything else OpenCV reads). It is read with its original depth and channels, so a 16-bit PNG stays 16-bit, and joins the history like a received image. |
-| **File → Save As…** (⇧⌘S) | Save the displayed image as PNG or JPEG. `.png` is added if you type no extension. |
+| **File → Save As…** (⇧⌘S) | Save the image in the view, as shown on screen, as PNG or JPEG. The suggested name is the image's name without an image-file extension (`photo.webp #3` suggests `photo #3.png`; `result v1.2` keeps its dot). `.png` is added if you type no extension. |
 | **Quit** (⌘Q) | Quit. On macOS it is in the application menu (**Image Processing**); on other systems in **File**. |
+| **Edit → Undo Delete** (⌘Z) | Bring back the last deleted image at its place in the list, and show it. The last 10 deletions can be undone. |
+| **Edit → Rename…** (⌘R) | Rename the image in the view, in the info strip (see below). |
+| **Edit → Duplicate** (⌘D) | Add a copy named `<name> copy` directly above the image, and show it. |
+| **Edit → Copy Image** (⌘C) | Put the image on the clipboard, as shown on screen (see the note below). |
+| **Edit → Delete** (⌘⌫) | Remove the image and show the next one down the sidebar, or the one above if it was last. With the default sort that is the next older image. If the search hides the deleted image, the first one listed is shown. |
+| **Edit → Find…** (⌘F) | Put the cursor in the sidebar's search field, with its text selected. |
+| **View → Show in Sidebar**, **View → Sort By** | The same choices as the sidebar's options button (see [The sidebar](#the-sidebar)). |
+| **View → Show Log** (⌘L) | Open or close the activity log, as **Log ▴** in the status bar does (see [Activity log](#activity-log)). |
+| **View → Appearance** | **System** (the default) follows the system's light or dark appearance; **Light** and **Dark** keep one whatever the system does. The choice is kept, and the client shares it (see [Running the client](#running-the-client)). Needs Qt 6.8 or newer: built with older Qt, the menu is absent and both programs follow the system. |
+| **History → Keep Images Between Sessions** | Store the history on disk, for every viewer (see [Keeping images between sessions](#keeping-images-between-sessions)). |
+| **History → Clear History…** | Delete every image in this viewer, in memory and on disk, after asking. |
+| Thumbnail icons | The pencil, two squares and bin beside a thumbnail rename, duplicate and delete that image (see [The sidebar](#the-sidebar)). |
+
+The Edit menu acts on the image in the view. While you type in a text field, such as the rename field, ⌘C,
+⌘Z and ⌘⌫ act on the text instead.
+
+**Copy Image and Save As take the 8-bit picture on screen, not the original values.** Other programs cannot
+take 16-bit, signed or floating-point pixels, so a Sobel result pastes as the stretched grey image you see.
+The readout (below) is where the original values are.
 
 The history keeps the newest 100 images, or fewer if they would hold more than 2 GiB of pixels; the
-oldest are dropped first, and the newest is always kept.
+oldest are dropped first. The pixels counted are each image's original and its 8-bit copy on screen, and
+they include the last deleted images that **Undo Delete** can bring back (these go first when room is
+needed) and every duplicate, though a duplicate shares its original's pixels. An image just received or
+opened is always kept, even one that is larger than the limit on its own; so is the original of a
+duplicate.
+
+### The sidebar
+
+- **Width.** Drag the divider between the sidebar and the image to make the sidebar between 120 and 400 pixels
+  wide. The thumbnails scale with it, and the viewer remembers the width.
+- **Cells.** Every item has the same size: the image fitted and centred in its box, with its name and details
+  (for example `640×480 · 1 ch · 16S · 614.4 kB`, as in the info strip) below. A long name is shortened in the
+  middle. The tooltip shows the full name, the details, the time the image arrived and, if it was renamed or
+  duplicated since, the time of that.
+- **Selection.** The selected item is filled with a neutral grey, a little stronger while the sidebar has the
+  keyboard, and keeps it while you work elsewhere in the window; the item under the pointer gets a lighter
+  grey. Names, details and icons keep their usual colours, and a thin line separates neighbouring items.
+- **Icons.** The selected item, and the one under the pointer, show three icons beside the picture:
+  rename (pencil), duplicate (two squares) and delete (bin). Each icon's tooltip names its shortcut.
+- **What items show.** The options button's **Show** menu (also **View → Show in Sidebar**) turns the
+  Thumbnail, the Name and the Details on or off; all three are on at first, and the viewer remembers the
+  choice. At least one stays on: the last one ticked cannot be unticked. Without the thumbnail, each item is a
+  compact row, with the text on the left and the three icons in a row on the right, so a names-only list fits
+  many more images. The icons' place is kept on every row, so the text never moves when they appear.
+- **Right-click menu.** Rename…, Duplicate, Copy Image, Save As… and Delete, for the thumbnail clicked.
+- **Keys.** With the sidebar focused (as it is when the window opens, or after clicking a thumbnail), the
+  arrow keys move through the images and Delete or Backspace deletes the selected one. On a Mac keyboard the
+  key labelled "delete" is Backspace.
+
+#### Searching and sorting
+
+The row at the top of the sidebar holds the search field and an options button, whose menu holds **Show**
+(above) and **Sort By**.
+
+- **Search.** Type part of a name: the sidebar lists the images whose names contain it, ignoring case, so
+  `canny` finds `Canny edges`. Only names are searched, and the text is taken literally (no wildcards). While
+  the field has text, a line below it counts the images listed out of all images, for example `2 of 10`.
+  - Esc clears the search; Esc in an empty field moves to the list.
+  - Enter or Down selects the first image listed and moves to the list.
+  - ⌘F (**Edit → Find…**) jumps to the field from anywhere in the window.
+  - The search starts empty every time the viewer starts.
+- **The search never changes the image shown.** If it hides the image in the view, the view keeps showing it
+  and the sidebar shows no selection; the Edit menu still acts on it. Images that arrive while the search hides
+  them are added and counted quietly, without taking the view. Matching ones are shown as they arrive, so
+  searching `Canny` while `pipeline_demo` runs shows each new Canny image and lets the other stages pass.
+- **Sort.** The options button's **Sort By** menu (also **View → Sort By**) offers:
+
+  | Key | Natural direction | Sorts by |
+  |---|---|---|
+  | Time Received (default) | Newest first | The order images arrived in. A copy sits directly above its original, and an undone delete returns to its place. |
+  | Time Modified | Newest first | The last rename or duplication; an image never renamed counts its arrival. |
+  | Name | A to Z | The name, as Finder sorts it: ignoring case, with numbers by value (`stage 2` before `stage 10`). |
+  | Size | Largest first | The bytes of pixel data, also for an opened file (not its size on disk). |
+
+  Choosing a key sets its natural direction; **Ascending** and **Descending** then flip it. Images with equal
+  keys stay newest first. The list re-sorts at once when an image arrives or is renamed, and the viewer
+  remembers the sort.
+
+### The info strip
+
+One line above the image shows its name, a pencil and its details, for example
+`Sobel X ✎  640×480 · 1 ch · 16S · 614.4 kB`. The size is the image's pixel data (rows × columns × bytes per
+element) for a received image, and the file's size on disk, marked `file`, for an opened one. Sizes use decimal
+units, as Finder shows them. With no image, the strip is hidden.
+
+**Renaming.** Click the pencil (here or on the thumbnail) and type. Enter saves, Esc cancels, and clicking
+elsewhere saves, as in Finder. The rename stays with the image it started on, even if new images arrive
+meanwhile.
 
 ### Reading pixel values
 
@@ -102,7 +275,7 @@ to six significant digits, always with a decimal point regardless of the system'
 | 1 channel | Grey. |
 | 2 channels | Channel 0 as red, channel 1 as green (useful for optical flow). |
 | 3 channels | Read as BGR, OpenCV's order. |
-| 4 channels | Read as BGRA; transparent areas show the dark background through. |
+| 4 channels | Read as BGRA; transparent areas show a grey checkerboard, in greys that suit dark or light mode. |
 
 **Save As…** writes this displayed version; PNG and JPEG cannot hold every depth.
 
@@ -112,10 +285,28 @@ to six significant digits, always with a decimal point regardless of the system'
 open build/debug/apps/client/client.app
 ```
 
-Click **Open…** and choose an image; a preview appears. Click **Send image**: the viewer shows it as
-`<file name> #1`, then `#2` for the next send, and so on. The client's status bar shows the result
-(`Delivered`, `Viewer unavailable`, …; see [Send results](#send-results)). The client sends to
-`$VISUAL_DEBUG_ENDPOINT` if set, otherwise to `tcp://127.0.0.1:7139`.
+The bar along the top, on the same panel grey as the viewer's sidebar, holds **Open…** (Ctrl+O), **Send
+image** (Ctrl+Return) and the **Send to** field with the endpoint images go to; the preview fills the rest of
+the window. Open an image and a preview appears;
+**Send image** stays disabled until then. Each send shows its name and result in the status bar, such as
+`[photo.png #1]: Delivered` (see [Send results](#send-results)).
+
+The viewer shows the image as `<file name> #1`, then `#2` for the next send, and so on. A send the viewer
+did not take (`Viewer unavailable`, `Rejected`, `Invalid image`, `Invalid endpoint`) keeps its number, so
+the next send uses it. `Timeout` uses up its number, because the image may still have reached the
+viewer. The numbers count every send of the session, whichever file it was, and start again
+at `#1` when the client restarts.
+
+**View → Appearance** offers the viewer's System, Light and Dark choices, and the two programs share one
+setting: choose Dark in either, and the other turns dark when you next switch to it. With Qt older than 6.8
+the client has no View menu.
+
+**Send to** starts with `$VISUAL_DEBUG_ENDPOINT` if set, otherwise with the endpoint the client last sent
+to, otherwise with `tcp://127.0.0.1:7139`. Edit it to send to another viewer, such as one started with
+`--endpoint tcp://127.0.0.1:7140`; the next send goes there, and the client remembers it for the next start.
+A send that finds the endpoint unusable (`Invalid endpoint`, for example `tcp://localhost` without a port)
+outlines the field in red until you edit it, and is not remembered. A variable set to
+`tcp://127.0.0.1:7139` itself counts as unset, so the remembered endpoint is used.
 
 ## Configuration
 
@@ -135,7 +326,7 @@ viewer, the first send waits up to `replyTimeout` (500 ms by default) and later 
 |---|---|---|
 | `Delivered` | The viewer accepted the image. | Nothing. |
 | `ViewerUnavailable` | No viewer is listening, or a retry back-off is running after a failure (1 s by default). | Start the viewer. The next send after the back-off connects; no restart of your program is needed. |
-| `Rejected` | The viewer answered with an error. Usually it is busy: eight images were waiting for its display for over 200 ms. | Send less often, or ignore it; the viewer is still running. |
+| `Rejected` | The viewer answered with an error. Usually it is busy (eight images were waiting for its display for over 200 ms) or paused. | Send less often, or ignore it; the viewer is still running. A paused viewer takes images again once resumed. |
 | `InvalidImage` | The image is empty, not 2-D, larger than 32768 pixels in a dimension or 512 MiB in total, or of a type the format does not carry (more than four channels, or the OpenCV 5 depths `16F`, `16BF`, `Bool`, `64U`, `64S`, `32U`). Nothing was sent. | Convert the image, for example with `convertTo(CV_32F)`. |
 | `Timeout` | The image went out but no answer came back in time. The deadline grows by 10 ms per MiB, so large images are not cut short. | Check that the viewer is not frozen. The connection is rebuilt automatically. |
 | `InvalidEndpoint` | The endpoint string cannot be used, for example an empty string or `tcp://localhost` without a port. | Fix the endpoint. |
@@ -334,7 +525,7 @@ open -n build/debug/apps/image_processing/image_processing.app --args --endpoint
 ```
 
 `open` returns before the viewers are ready; when the second one's status bar says
-`Listening on tcp://127.0.0.1:7140`, point a sender at it:
+`Listening on [tcp://127.0.0.1:7140]`, point a sender at it:
 
 ```sh
 VISUAL_DEBUG_ENDPOINT=tcp://127.0.0.1:7140 build/debug/examples/minimal_sender/minimal_sender
