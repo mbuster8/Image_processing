@@ -65,5 +65,6 @@ set_target_properties(visual_debug_viewer PROPERTIES
     WIN32_EXECUTABLE ON)
 target_compile_definitions(visual_debug_viewer PRIVATE IMAGE_PROCESSING_VERSION="${PROJECT_VERSION}")
 target_link_libraries(visual_debug_viewer PRIVATE viewer_ui)
+image_processing_add_bundle_icon(visual_debug_viewer "${PROJECT_SOURCE_DIR}/resources/icons/viewer_icon.png")
 image_processing_set_warnings(visual_debug_viewer)
 image_processing_add_sanitizer_defaults(visual_debug_viewer)

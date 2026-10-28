@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     qt_common::setApplicationIdentity(QLatin1String(qt_common::kViewerName));
     qt_common::applyAppearance(qt_common::storedAppearance());
     QApplication::setApplicationVersion(QStringLiteral(IMAGE_PROCESSING_VERSION));
-    QApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/application_icon.png")));
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/viewer_icon.png")));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QCoreApplication::translate("About", qt_common::kViewerDescription));

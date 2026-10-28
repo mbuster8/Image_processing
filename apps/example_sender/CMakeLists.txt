@@ -14,8 +14,11 @@ target_link_libraries(example_sender_ui
         viewer_core::viewer_core)
 image_processing_set_warnings(example_sender_ui)
 
+# Resources belong to the executable: a static library's resources are dropped by the linker unless
+# initialised by hand.
 qt_add_executable(visual_debug_example_sender MACOSX_BUNDLE
-    main.cpp)
+    main.cpp
+    resources.qrc)
 set_target_properties(visual_debug_example_sender PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "Visual Debug Example Sender"
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.proximasus.visual-debug-example-sender"
@@ -24,5 +27,7 @@ set_target_properties(visual_debug_example_sender PROPERTIES
     WIN32_EXECUTABLE ON)
 target_compile_definitions(visual_debug_example_sender PRIVATE IMAGE_PROCESSING_VERSION="${PROJECT_VERSION}")
 target_link_libraries(visual_debug_example_sender PRIVATE example_sender_ui)
+image_processing_add_bundle_icon(visual_debug_example_sender
+                                 "${PROJECT_SOURCE_DIR}/resources/icons/example_sender_icon.png")
 image_processing_set_warnings(visual_debug_example_sender)
 image_processing_add_sanitizer_defaults(visual_debug_example_sender)
