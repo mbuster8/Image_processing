@@ -22,8 +22,9 @@ namespace {
 
 viewer_core::ReceivedImage makeImage(int rows, int cols, int type, viewer_core::ImageOrigin origin = {}) {
     const cv::Mat original(rows, cols, type, cv::Scalar::all(0));
-    return {1, "image", original, viewer_core::toDisplayImage(original), viewer_core::describeImage(original),
-            origin};
+    return {
+        1,     "image", original, viewer_core::toDisplayImage(original), viewer_core::describeImage(original),
+        origin};
 }
 
 QString siSize(std::uint64_t bytes) {

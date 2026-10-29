@@ -23,7 +23,7 @@ TEST(QtImageSink, DeliversOnReceiverThread) {
     Qt::HANDLE slotThread = nullptr;
     QObject::connect(
         &sink, &QtImageSink::imageReceived, &receiver,
-        [&](const visual_debug::ImageMessage &) { slotThread = QThread::currentThreadId(); },
+        [&](const visual_debug::ImageMessage&) { slotThread = QThread::currentThreadId(); },
         Qt::QueuedConnection);
 
     bool accepted = false;

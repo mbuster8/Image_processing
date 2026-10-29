@@ -19,11 +19,16 @@ TEST(Pipeline, TestPatternIsColourAndSized) {
 }
 
 TEST(Pipeline, StagesProduceTheDocumentedTypes) {
-    const std::vector<std::pair<std::string, int>> expected{
-        {"Original", CV_8UC3},           {"With alpha", CV_8UC4},     {"Greyscale", CV_8UC1},
-        {"Gaussian blur", CV_8UC1},      {"Sobel X", CV_16SC1},       {"Canny edges", CV_8UC1},
-        {"Distance transform", CV_32FC1}, {"Laplacian", CV_64FC1},     {"Centre crop", CV_8UC3},
-        {"Multi-channel 16-bit", CV_16UC3}};
+    const std::vector<std::pair<std::string, int>> expected{{"Original", CV_8UC3},
+                                                            {"With alpha", CV_8UC4},
+                                                            {"Greyscale", CV_8UC1},
+                                                            {"Gaussian blur", CV_8UC1},
+                                                            {"Sobel X", CV_16SC1},
+                                                            {"Canny edges", CV_8UC1},
+                                                            {"Distance transform", CV_32FC1},
+                                                            {"Laplacian", CV_64FC1},
+                                                            {"Centre crop", CV_8UC3},
+                                                            {"Multi-channel 16-bit", CV_16UC3}};
     const cv::Mat original = pipeline_demo::makeTestPattern();
 
     const auto stages = pipeline_demo::buildPipeline();

@@ -129,8 +129,7 @@ QString ThumbnailModel::caption(const Row& row) const {
 }
 
 QString ThumbnailModel::toolTip(const Row& row) {
-    QStringList lines{row.name, row.details,
-                      tr("Received %1").arg(clockTime(row.receivedMicroseconds))};
+    QStringList lines{row.name, row.details, tr("Received %1").arg(clockTime(row.receivedMicroseconds))};
     if (row.modifiedMicroseconds != row.receivedMicroseconds) {
         lines << tr("Modified %1").arg(clockTime(row.modifiedMicroseconds));
     }

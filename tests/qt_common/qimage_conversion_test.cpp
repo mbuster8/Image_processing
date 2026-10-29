@@ -26,7 +26,8 @@ TEST(QImageConversion, CopiesRgbaPixels) {
 }
 
 TEST(QImageConversion, RejectsOtherTypes) {
-    EXPECT_THROW((void)qt_common::toQImage(cv::Mat(1, 1, CV_8UC3, cv::Scalar::all(0))), std::invalid_argument);
+    EXPECT_THROW((void)qt_common::toQImage(cv::Mat(1, 1, CV_8UC3, cv::Scalar::all(0))),
+                 std::invalid_argument);
 }
 
 } // namespace

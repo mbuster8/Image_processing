@@ -23,8 +23,8 @@ using std::chrono::system_clock;
 
 // A time with a microsecond part, which system_clock keeps on every platform.
 system_clock::time_point timeAt(long long microsecondsSinceEpoch) {
-    return system_clock::time_point(std::chrono::duration_cast<system_clock::duration>(
-        microseconds(microsecondsSinceEpoch)));
+    return system_clock::time_point(
+        std::chrono::duration_cast<system_clock::duration>(microseconds(microsecondsSinceEpoch)));
 }
 
 LogEntry entry(int number, LogKind kind = LogKind::Info) {
@@ -155,8 +155,8 @@ TEST(ActivityLog, CompactsTheFile) {
 TEST(ActivityLog, KeepsTheFileOwnerOnly) {
     const QTemporaryDir folder;
     const QString path = QDir(folder.path()).filePath(QStringLiteral("activity.log"));
-    constexpr QFileDevice::Permissions kOthers = QFileDevice::ReadGroup | QFileDevice::WriteGroup |
-                                                 QFileDevice::ReadOther | QFileDevice::WriteOther;
+    constexpr QFileDevice::Permissions kOthers =
+        QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ReadOther | QFileDevice::WriteOther;
     ActivityLog log(path);
 
     log.append(entry(1));

@@ -68,8 +68,10 @@ the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macO
 Files `snake_case.h/.cpp`; classes `PascalCase`; functions `camelCase`; members `m_`; constants
 `kPascalCase`; namespaces lower case; tests `<unit>_test.cpp`. British English in identifiers, comments, UI
 text and docs (`normalise`, `colour`); third-party names keep theirs (`cv::COLOR_BGR2RGB`). New-style Qt
-`connect`. No `using namespace` in headers. `.clang-format`: LLVM base, 4 spaces, 110 columns. Comments
-explain why.
+`connect`. No `using namespace` in headers. `.clang-format`: LLVM base, 4 spaces, 110 columns, pointers
+left. CI checks formatting with clang-format **22.1.8**, the version Qt Creator bundles
+(`/Applications/Qt Creator.app/Contents/Resources/libexec/clang/bin/clang-format`); other versions format a
+few constructs differently. Comments explain why.
 
 ## Former names
 

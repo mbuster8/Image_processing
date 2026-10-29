@@ -15,9 +15,9 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QScrollBar>
-#include <QStyle>
 #include <QString>
 #include <QStringList>
+#include <QStyle>
 #include <QToolTip>
 
 #include <algorithm>

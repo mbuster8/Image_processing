@@ -120,7 +120,7 @@ private:
     QSplitter* m_logSplitter = nullptr;
     QToolButton* m_logToggle = nullptr;
     QLabel* m_latestLabel = nullptr; // the newest entry while the panel is closed
-    QString m_endpoint; // as configured, for the window title
+    QString m_endpoint;              // as configured, for the window title
     bool m_allowRemote;
     std::optional<viewer_core::ImageId> m_currentId;
 };

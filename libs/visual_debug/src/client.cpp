@@ -60,14 +60,16 @@ public:
         const auto& message = std::get<EncodedMessage>(encoded);
         const auto pixels = message.pixelBytes();
         // message_t copies the pixels, so the caller may change its Mat as soon as send() returns.
-        if (!m_socket->send(zmq::buffer(message.header), zmq::send_flags::sndmore | zmq::send_flags::dontwait) ||
+        if (!m_socket->send(zmq::buffer(message.header),
+                            zmq::send_flags::sndmore | zmq::send_flags::dontwait) ||
             !m_socket->send(zmq::message_t(pixels.data(), pixels.size()), zmq::send_flags::dontwait)) {
             recover();
             return SendResult::ViewerUnavailable;
         }
 
         zmq::message_t reply;
-        if (!waitFor(ZMQ_POLLIN, replyDeadline(pixels.size())) || !m_socket->recv(reply, zmq::recv_flags::dontwait)) {
+        if (!waitFor(ZMQ_POLLIN, replyDeadline(pixels.size())) ||
+            !m_socket->recv(reply, zmq::recv_flags::dontwait)) {
             // A REQ socket still waiting for a lost reply cannot send again, so start afresh ("Lazy Pirate").
             recover();
             return SendResult::Timeout;
@@ -84,7 +86,7 @@ public:
 private:
     bool openSocket() {
         zmq::socket_t socket(m_context, zmq::socket_type::req);
-        socket.set(zmq::sockopt::linger, 0); // process exit never waits for undelivered images
+        socket.set(zmq::sockopt::linger, 0);       // process exit never waits for undelivered images
         socket.set(zmq::sockopt::immediate, true); // no connection means "unavailable", not "queued"
         socket.set(zmq::sockopt::maxmsgsize, kMaxReplyBytes);
         socket.set(zmq::sockopt::ipv6, true); // dual-stack: tcp://[::1] works as well as 127.0.0.1
@@ -108,7 +110,8 @@ private:
     // grows with the image instead of misreporting a slow delivery as Timeout.
     std::chrono::milliseconds replyDeadline(std::size_t pixelBytes) const {
         constexpr std::size_t kMebibyte = 1024 * 1024;
-        const auto mebibytes = static_cast<std::chrono::milliseconds::rep>((pixelBytes + kMebibyte - 1) / kMebibyte);
+        const auto mebibytes =
+            static_cast<std::chrono::milliseconds::rep>((pixelBytes + kMebibyte - 1) / kMebibyte);
         return m_options.replyTimeout + std::chrono::milliseconds(10 * mebibytes);
     }
 

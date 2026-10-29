@@ -7,7 +7,7 @@ namespace {
 
 constexpr std::array<std::string_view, 22> kImageExtensions{
     "png", "jpg", "jpeg", "jpe", "bmp", "dib", "tif", "tiff", "webp", "pbm", "pgm",
-    "ppm", "pxm", "pnm", "pfm", "exr", "hdr", "pic", "sr",   "ras",  "jp2", "avif"};
+    "ppm", "pxm", "pnm",  "pfm", "exr", "hdr", "pic", "sr",   "ras",  "jp2", "avif"};
 
 } // namespace
 
