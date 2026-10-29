@@ -1,5 +1,7 @@
 # ID Vision Lab
 
+[![CI](https://github.com/mbuster8/id-vision-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/mbuster8/id-vision-lab/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/mbuster8/id-vision-lab/actions/workflows/codeql.yml/badge.svg)](https://github.com/mbuster8/id-vision-lab/actions/workflows/codeql.yml)
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 
 A visual debugger for OpenCV, growing into a lab for reading identity documents by camera and by chip.
@@ -221,6 +223,7 @@ id-vision-lab/
 ├── resources/icons/       the apps' icons
 ├── docs/                  guides, wire format, architecture, decision records
 ├── cmake/                 warning, sanitizer and macOS icon settings
+├── .github/               continuous integration, CodeQL and Dependabot
 ├── CMakeLists.txt
 ├── CMakePresets.json      debug, release and asan builds
 ├── LICENSE                Apache License 2.0
@@ -229,9 +232,10 @@ id-vision-lab/
 
 ## Status
 
-Builds and passes all tests on macOS with Apple silicon. Windows support (vcpkg, presets and a setup
-script) is the next step; the code is already written to be portable. Linux build steps are in the build
-guide but not yet verified.
+Builds and passes all tests on macOS with Apple silicon. Continuous integration builds and tests every push
+on macOS and on Ubuntu 24.04 (with the distribution's OpenCV 4 and Qt 6.4, the oldest versions supported).
+Windows support (vcpkg, presets and a setup script) is the next step; the code is already written to be
+portable.
 
 ## Licence
 

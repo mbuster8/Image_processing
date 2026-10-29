@@ -3,8 +3,8 @@
 How to install the tools, build every part of the project, run the tests and work on it in Qt Creator.
 For running the programs, see the [user guide](user-guide.md).
 
-Verified on macOS 27.0.1 on Apple silicon (Mac mini), Apple clang 21, October 2026. Linux steps are written
-but not yet verified; Windows is planned for a separate session.
+Verified on macOS 27.0.1 on Apple silicon (Mac mini), Apple clang 21, October 2026. Continuous integration
+also builds and tests every push on Ubuntu 24.04; Windows is planned for a separate session.
 
 ## Prerequisites (macOS)
 
@@ -206,18 +206,21 @@ or this project's `build` folder; otherwise, find out what the tool is first.
 See [Link the library from your own CMake project](user-guide.md#6-link-the-library-from-your-own-cmake-project)
 in the user guide.
 
-## Linux (not yet verified)
+## Linux
 
-On Ubuntu 24.04 or Debian 13 these packages should provide everything:
+Continuous integration builds and tests every push on Ubuntu 24.04 with these packages, which give
+OpenCV 4.6 and Qt 6.4, the oldest versions supported (the list lives in
+[`.github/actions/install-ubuntu-deps`](../.github/actions/install-ubuntu-deps/action.yml)):
 
 ```sh
-sudo apt install build-essential cmake ninja-build pkgconf qt6-base-dev libopencv-dev \
-    libzmq3-dev cppzmq-dev nlohmann-json3-dev libgtest-dev
+sudo apt install build-essential cmake ninja-build pkgconf qt6-base-dev qt6-qpa-plugins libgl-dev \
+    libopencv-dev libzmq3-dev cppzmq-dev nlohmann-json3-dev libgtest-dev
 ```
 
-Then build with the presets as above. The presets add `/opt/homebrew/bin` to `PATH`, which is harmless on
-Linux because a missing folder on `PATH` is ignored. The apps are then plain executables rather than
-bundles, under the same names: `build/debug/apps/viewer/visual_debug_viewer` and
+Then build with the presets as above. With Qt older than 6.8 the **View → Appearance** menu is absent. The
+presets add `/opt/homebrew/bin` to `PATH`, which is harmless on Linux because a missing folder on `PATH` is
+ignored. The apps are then plain executables rather than bundles, under the same names:
+`build/debug/apps/viewer/visual_debug_viewer` and
 `build/debug/apps/example_sender/visual_debug_example_sender`. Their windows show their icons, but there is
 no desktop launcher for them yet.
 

@@ -1,0 +1,15 @@
+name: Install Ubuntu dependencies
+description: >
+  The distribution's own packages: OpenCV 4 and Qt 6.4 on Ubuntu 24.04, the oldest versions the project
+  supports, so building with them proves the OpenCV 4.x and Qt 6.4 floors still hold.
+runs:
+  using: composite
+  steps:
+    - name: Install packages
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes --no-install-recommends \
+          build-essential cmake ninja-build pkgconf \
+          qt6-base-dev qt6-qpa-plugins libgl-dev \
+          libopencv-dev libzmq3-dev cppzmq-dev nlohmann-json3-dev libgtest-dev

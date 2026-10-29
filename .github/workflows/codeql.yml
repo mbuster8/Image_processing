@@ -1,0 +1,53 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Weekly, so new CodeQL queries also run against code that has not changed.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyse (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: c-cpp
+            build-mode: manual
+          # The workflows themselves: unsafe triggers, script injection, over-broad permissions.
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: matrix.build-mode == 'manual'
+        uses: ./.github/actions/install-ubuntu-deps
+
+      - uses: github/codeql-action/init@8498dc4c2b27cdd99baf0f87955b29ebbf30c78d # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - if: matrix.build-mode == 'manual'
+        name: Build
+        run: |
+          cmake --preset release
+          cmake --build --preset release
+
+      - uses: github/codeql-action/analyze@8498dc4c2b27cdd99baf0f87955b29ebbf30c78d # v4.39.1
+        with:
+          category: "/language:${{ matrix.language }}"
