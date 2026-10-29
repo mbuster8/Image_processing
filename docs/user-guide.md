@@ -542,17 +542,17 @@ comparing two versions of an algorithm, one per window.
 ### 6. Link the library from your own CMake project
 
 `visual_debug` needs OpenCV, ZeroMQ (`cppzmq`) and nlohmann/json, but never Qt. Add this repository as a
-subdirectory, for example as a git submodule in `external/Image_processing`:
+subdirectory, for example as a git submodule in `external/id-vision-lab`:
 
 ```cmake
 cmake_minimum_required(VERSION 3.25)
 project(my_app LANGUAGES CXX)
 
 # Only the libraries: no Qt apps, examples or tests from the visual debugger.
-set(IMAGE_PROCESSING_BUILD_QT_APPS OFF)
-set(IMAGE_PROCESSING_BUILD_EXAMPLES OFF)
-set(IMAGE_PROCESSING_BUILD_TESTS OFF)
-add_subdirectory(external/Image_processing)
+set(ID_VISION_LAB_BUILD_QT_APPS OFF)
+set(ID_VISION_LAB_BUILD_EXAMPLES OFF)
+set(ID_VISION_LAB_BUILD_TESTS OFF)
+add_subdirectory(external/id-vision-lab)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs)
 

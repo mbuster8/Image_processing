@@ -1,7 +1,7 @@
 # Gives a macOS app bundle its Finder and Dock icon, made at build time from one square PNG (1024 pixels is
 # best), so the repository holds only the PNG. Elsewhere it does nothing: Windows icons come with the Windows
 # port.
-function(image_processing_add_bundle_icon target png)
+function(id_vision_lab_add_bundle_icon target png)
     if(NOT APPLE)
         return()
     endif()

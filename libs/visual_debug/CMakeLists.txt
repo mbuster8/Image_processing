@@ -19,4 +19,4 @@ target_link_libraries(visual_debug
         cppzmq
         nlohmann_json::nlohmann_json)
 
-image_processing_set_warnings(visual_debug)
+id_vision_lab_set_warnings(visual_debug)

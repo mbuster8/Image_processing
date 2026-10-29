@@ -1,4 +1,8 @@
-# Image Processing — Visual Debug Viewer for OpenCV
+# ID Vision Lab
+
+A visual debugger for OpenCV, growing into a lab for reading identity documents by camera and by chip.
+
+## The Visual Debug Viewer
 
 An OpenCV program calls one function, and the image appears in the **Visual Debug Viewer**, a separate
 window where you can zoom into it, pan around and read the original value of any pixel, whether it is
@@ -14,7 +18,15 @@ visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
 brought it back: ported to Qt 6 and OpenCV 5, restructured, tested and documented. What changed, and why,
-is [below](#what-changed-since-2013).
+is [below](#what-changed-since-2013). Until October 2026 the repository was called `Image_processing`.
+
+## Coming next
+
+- **Live channels** in the viewer, so a camera or video stream updates in place instead of filling the
+  history.
+- **The Document Lab**, a desktop app for developing document reading: it finds an identity document in a
+  camera image, checks capture quality, reads the machine-readable zone (MRZ), and reads the passport's chip
+  (ICAO 9303: BAC, PACE, Passive and Active Authentication) through a PC/SC reader.
 
 ## How it works
 
@@ -192,7 +204,7 @@ file: `photo.png #1`.
 ## Project layout
 
 ```
-Image_processing/
+id-vision-lab/
 ├── libs/
 │   ├── visual_debug/      the sender library and the viewer's server (no Qt)
 │   └── viewer_core/       the viewer's logic: display, history, pixel readout, zoom (no Qt)

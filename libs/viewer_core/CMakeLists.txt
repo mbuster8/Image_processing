@@ -18,4 +18,4 @@ target_link_libraries(viewer_core
     PRIVATE
         opencv_imgproc)
 
-image_processing_set_warnings(viewer_core)
+id_vision_lab_set_warnings(viewer_core)

@@ -1,4 +1,4 @@
-# CLAUDE.md — Image Processing: Visual Debug Viewer for OpenCV
+# CLAUDE.md — ID Vision Lab
 
 A 2013 thesis project revived in 2026: the `visual_debug` library sends a `cv::Mat` over ZeroMQ to the
 Visual Debug Viewer, a separate Qt 6 app with zoom, history and pixel readout; the Visual Debug Example
@@ -25,7 +25,7 @@ cmake --preset debug                  # also: release, asan
 cmake --build --preset debug
 ctest --preset debug                  # all tests; -R <regex> to filter
 ctest --preset asan                   # sanitizers; undefined behaviour aborts the test
-cmake --preset debug -B build/no-qt -DIMAGE_PROCESSING_BUILD_QT_APPS=OFF   # proves the libraries need no Qt
+cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF   # proves the libraries need no Qt
 ```
 
 Binaries land in `build/<preset>/`: `apps/viewer/visual_debug_viewer.app`,
@@ -72,6 +72,10 @@ text and docs (`normalise`, `colour`); third-party names keep theirs (`cv::COLOR
 explain why.
 
 ## Former names
+
+Until October 2026 the repository was `Image_processing` and the CMake project `ImageProcessing`, with
+options `IMAGE_PROCESSING_*`, functions `image_processing_*` and the define `IMAGE_PROCESSING_VERSION`; they
+are now `IdVisionLab`, `ID_VISION_LAB_*`, `id_vision_lab_*` and `ID_VISION_LAB_VERSION`.
 
 Until October 2026 the apps were "Image Processing" in `apps/image_processing` (now `apps/viewer`) and
 "Image Processing Client" in `apps/client` (now `apps/example_sender`); their tests were `qt_ui_tests` (now

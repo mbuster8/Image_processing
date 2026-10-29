@@ -99,10 +99,10 @@ macOS.
 
 | Option | Default | Effect |
 |---|---|---|
-| `IMAGE_PROCESSING_BUILD_QT_APPS` | `ON` | The viewer, the example sender, `qt_common` and the Qt tests |
-| `IMAGE_PROCESSING_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender` and their tests |
-| `IMAGE_PROCESSING_BUILD_TESTS` | `ON` | All GoogleTest executables |
-| `IMAGE_PROCESSING_SANITIZERS` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer (the `asan` preset turns it on) |
+| `ID_VISION_LAB_BUILD_QT_APPS` | `ON` | The viewer, the example sender, `qt_common` and the Qt tests |
+| `ID_VISION_LAB_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender` and their tests |
+| `ID_VISION_LAB_BUILD_TESTS` | `ON` | All GoogleTest executables |
+| `ID_VISION_LAB_SANITIZERS` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer (the `asan` preset turns it on) |
 
 ### Building without Qt
 
@@ -110,7 +110,7 @@ The two libraries never use Qt. To prove it, or to build on a machine without Qt
 and build into a separate folder:
 
 ```sh
-cmake --preset debug -B build/no-qt -DIMAGE_PROCESSING_BUILD_QT_APPS=OFF
+cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF
 cmake --build build/no-qt
 ctest --test-dir build/no-qt               # the 170 tests that need no Qt
 ```

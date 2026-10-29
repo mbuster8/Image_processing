@@ -37,7 +37,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "IMAGE_PROCESSING_SANITIZERS": "ON"
+        "ID_VISION_LAB_SANITIZERS": "ON"
       }
     }
   ],

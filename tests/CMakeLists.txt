@@ -3,18 +3,18 @@
 # it: state one test leaves behind breaks the next only when they share a process. Discovery runs the new
 # binary once at build time; antivirus scanning can make that first launch slow, hence the longer timeout.
 # Callers pass GTest::gtest_main, or GTest::gtest with their own main().
-function(image_processing_add_test_executable target)
+function(id_vision_lab_add_test_executable target)
     cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;LIBRARIES")
     add_executable(${target} ${ARG_SOURCES})
     target_link_libraries(${target} PRIVATE ${ARG_LIBRARIES})
-    image_processing_set_warnings(${target})
-    image_processing_add_sanitizer_defaults(${target})
+    id_vision_lab_set_warnings(${target})
+    id_vision_lab_add_sanitizer_defaults(${target})
     gtest_discover_tests(${target} DISCOVERY_TIMEOUT 30 PROPERTIES TIMEOUT 60)
     add_test(NAME "${target} (whole program)" COMMAND ${target})
     set_tests_properties("${target} (whole program)" PROPERTIES LABELS whole TIMEOUT 120)
 endfunction()
 
-image_processing_add_test_executable(visual_debug_tests
+id_vision_lab_add_test_executable(visual_debug_tests
     SOURCES
         visual_debug/wire_format_test.cpp
         visual_debug/endpoint_test.cpp
@@ -26,7 +26,7 @@ image_processing_add_test_executable(visual_debug_tests
         nlohmann_json::nlohmann_json
         GTest::gtest_main)
 
-image_processing_add_test_executable(viewer_core_tests
+id_vision_lab_add_test_executable(viewer_core_tests
     SOURCES
         viewer_core/display_converter_test.cpp
         viewer_core/image_history_test.cpp
@@ -37,8 +37,8 @@ image_processing_add_test_executable(viewer_core_tests
         viewer_core::viewer_core
         GTest::gtest_main)
 
-if(IMAGE_PROCESSING_BUILD_EXAMPLES)
-    image_processing_add_test_executable(pipeline_tests
+if(ID_VISION_LAB_BUILD_EXAMPLES)
+    id_vision_lab_add_test_executable(pipeline_tests
         SOURCES
             examples/pipeline_test.cpp
         LIBRARIES
@@ -49,9 +49,9 @@ endif()
 
 # The Qt code, with an offscreen QApplication. Every Qt test program uses qt_common/test_main.cpp, which keeps
 # the tests' settings apart from the owner's. The apps get a program each: both have a main_window.h.
-if(IMAGE_PROCESSING_BUILD_QT_APPS)
+if(ID_VISION_LAB_BUILD_QT_APPS)
     find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
-    image_processing_add_test_executable(qt_common_tests
+    id_vision_lab_add_test_executable(qt_common_tests
         SOURCES
             qt_common/test_main.cpp
             qt_common/about_test.cpp
@@ -66,7 +66,7 @@ if(IMAGE_PROCESSING_BUILD_QT_APPS)
             opencv_imgcodecs
             Qt6::Test
             GTest::gtest)
-    image_processing_add_test_executable(viewer_ui_tests
+    id_vision_lab_add_test_executable(viewer_ui_tests
         SOURCES
             qt_common/test_main.cpp
             viewer/activity_log_panel_test.cpp
@@ -86,7 +86,7 @@ if(IMAGE_PROCESSING_BUILD_QT_APPS)
             opencv_imgcodecs
             Qt6::Test
             GTest::gtest)
-    image_processing_add_test_executable(example_sender_ui_tests
+    id_vision_lab_add_test_executable(example_sender_ui_tests
         SOURCES
             qt_common/test_main.cpp
             example_sender/main_window_test.cpp
