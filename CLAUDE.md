@@ -1,9 +1,9 @@
 # CLAUDE.md — ID Vision Lab
 
-A 2013 thesis project revived in 2026: the `visual_debug` library sends a `cv::Mat` over ZeroMQ to the
-Visual Debug Viewer, a separate Qt 6 app with zoom, history and pixel readout; the Visual Debug Example
-Sender is a small Qt app that shows how to use the library. Read the linked documents rather than
-re-deriving them:
+A 2013 thesis project revived in 2026, public under Apache-2.0: the `visual_debug` library sends a
+`cv::Mat` over ZeroMQ to the Visual Debug Viewer, a separate Qt 6 app with zoom, history and pixel readout;
+the Visual Debug Example Sender is a small Qt app that shows how to use the library. Read the linked
+documents rather than re-deriving them:
 
 - [`docs/architecture.md`](docs/architecture.md): components, dependency rule, threads, transport, extension points
 - [`docs/wire-format.md`](docs/wire-format.md): the message format (authoritative)

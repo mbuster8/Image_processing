@@ -1,5 +1,7 @@
 # ID Vision Lab
 
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+
 A visual debugger for OpenCV, growing into a lab for reading identity documents by camera and by chip.
 
 ## The Visual Debug Viewer
@@ -220,7 +222,9 @@ id-vision-lab/
 ├── docs/                  guides, wire format, architecture, decision records
 ├── cmake/                 warning, sanitizer and macOS icon settings
 ├── CMakeLists.txt
-└── CMakePresets.json      debug, release and asan builds
+├── CMakePresets.json      debug, release and asan builds
+├── LICENSE                Apache License 2.0
+└── NOTICE
 ```
 
 ## Status
@@ -228,3 +232,8 @@ id-vision-lab/
 Builds and passes all tests on macOS with Apple silicon. Windows support (vcpkg, presets and a setup
 script) is the next step; the code is already written to be portable. Linux build steps are in the build
 guide but not yet verified.
+
+## Licence
+
+Copyright 2013, 2026 Matej Suster. Licensed under the [Apache License, Version 2.0](LICENSE); see also
+[NOTICE](NOTICE).
