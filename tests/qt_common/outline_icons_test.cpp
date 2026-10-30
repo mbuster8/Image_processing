@@ -21,7 +21,7 @@ constexpr std::initializer_list<OutlineIcon> kAllShapes = {
     OutlineIcon::Play,   OutlineIcon::Stop,      OutlineIcon::ChevronUp, OutlineIcon::ChevronDown,
     OutlineIcon::Copy,   OutlineIcon::Clear,     OutlineIcon::Search,    OutlineIcon::Options,
     OutlineIcon::Info,   OutlineIcon::Warning,   OutlineIcon::Error,     OutlineIcon::Folder,
-    OutlineIcon::Send};
+    OutlineIcon::Send,   OutlineIcon::Camera};
 
 QImage render(OutlineIcon shape) { return makeOutlineIcon(shape).pixmap(24, 24).toImage(); }
 

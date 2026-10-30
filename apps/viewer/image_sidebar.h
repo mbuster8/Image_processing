@@ -12,11 +12,12 @@ class QLabel;
 class QLineEdit;
 class QMenu;
 class QToolButton;
+class LiveChannelPanel;
 class ThumbnailPanel;
 
-// The splitter's first widget: one row with the search field and the options button, the "2 of 10" count
-// while searching, and the thumbnails below at the sidebar's full width. What items show and the sort are
-// remembered; the search is not, so every start lists every image.
+// The splitter's first widget: the Live group while live channels exist, one row with the search field and
+// the options button, the "2 of 10" count while searching, and the thumbnails below at the sidebar's full
+// width. What items show and the sort are remembered; the search is not, so every start lists every image.
 class ImageSidebar : public QWidget {
     Q_OBJECT
 
@@ -27,6 +28,7 @@ public:
 
     explicit ImageSidebar(QWidget* parent = nullptr);
 
+    LiveChannelPanel* liveChannels() const;
     ThumbnailPanel* thumbnails() const;
     QLineEdit* searchField() const;
     QLabel* countLabel() const;
@@ -55,6 +57,7 @@ private:
     void applySort(); // from the checked actions, and remembered
     void updateCount();
 
+    LiveChannelPanel* m_live;
     ThumbnailPanel* m_thumbnails;
     QLineEdit* m_search;
     QToolButton* m_optionsButton;

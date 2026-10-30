@@ -16,6 +16,10 @@ QColor hoverGrey(const QPalette& palette); // a cell under the pointer
 QColor selectionGrey(const QPalette& palette, bool focused);
 QColor dividerGrey(const QPalette& palette); // lines between panels and between cells
 
+// The system's accent colour: QPalette::Accent from Qt 6.6, the Highlight before it (which macOS derives from
+// the accent).
+QColor accentColour(const QPalette& palette);
+
 // Fills the widget, and the lists in it, with the panel grey, again whenever the application palette
 // changes, so a switch of appearance shows at once.
 void usePanelGrey(QWidget* widget);

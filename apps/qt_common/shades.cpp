@@ -63,6 +63,14 @@ QColor selectionGrey(const QPalette& palette, bool focused) {
 
 QColor dividerGrey(const QPalette& palette) { return towardsText(palette, kDivider); }
 
+QColor accentColour(const QPalette& palette) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    return palette.color(QPalette::Accent);
+#else
+    return palette.color(QPalette::Highlight);
+#endif
+}
+
 void usePanelGrey(QWidget* widget) {
     widget->setAutoFillBackground(true);
     applyPanelGrey(widget);

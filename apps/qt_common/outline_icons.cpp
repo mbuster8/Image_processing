@@ -137,6 +137,12 @@ QPainterPath shapePath(OutlineIcon shape) {
         addPolyline(path, {{4.0, 4.5}, {20.5, 12.0}, {4.0, 19.5}, {6.75, 12.0}}, true);
         addPolyline(path, {{6.75, 12.0}, {12.5, 12.0}});
         break;
+    case OutlineIcon::Camera:
+        // A body with the viewfinder's hump on top, and the lens.
+        addPolyline(path, {{8.5, 7.5}, {10.0, 5.0}, {14.0, 5.0}, {15.5, 7.5}});
+        path.addRoundedRect(QRectF(3.0, 7.5, 18.0, 12.0), 2.0, 2.0);
+        path.addEllipse(QPointF(12.0, 13.5), 3.5, 3.5);
+        break;
     }
     return path;
 }

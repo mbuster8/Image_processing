@@ -1,6 +1,7 @@
 #include "image_sidebar.h"
 
 #include "controls.h"
+#include "live_channel_panel.h"
 #include "outline_icons.h"
 #include "thumbnail_panel.h"
 
@@ -44,8 +45,9 @@ std::size_t indexOf(SidebarField field) {
 } // namespace
 
 ImageSidebar::ImageSidebar(QWidget* parent)
-    : QWidget(parent), m_thumbnails(new ThumbnailPanel), m_search(new QLineEdit),
-      m_optionsButton(new QToolButton), m_count(new QLabel), m_optionsMenu(new QMenu(this)) {
+    : QWidget(parent), m_live(new LiveChannelPanel), m_thumbnails(new ThumbnailPanel),
+      m_search(new QLineEdit), m_optionsButton(new QToolButton), m_count(new QLabel),
+      m_optionsMenu(new QMenu(this)) {
     // A width range rather than a fixed width: the splitter sets the width, and a fixed one left an empty
     // strip wherever the splitter's section was wider than the sidebar.
     setMinimumWidth(kMinimumWidth);
@@ -79,6 +81,7 @@ ImageSidebar::ImageSidebar(QWidget* parent)
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+    layout->addWidget(m_live); // pinned above the search: a stream stays in reach however long the history
     layout->addLayout(controls);
     layout->addWidget(m_count);
     layout->addWidget(m_thumbnails, 1);
@@ -119,6 +122,8 @@ ImageSidebar::ImageSidebar(QWidget* parent)
     connect(m_search, &QLineEdit::textChanged, this, &ImageSidebar::updateCount);
     connect(m_thumbnails, &ThumbnailPanel::listedChanged, this, &ImageSidebar::updateCount);
 }
+
+LiveChannelPanel* ImageSidebar::liveChannels() const { return m_live; }
 
 ThumbnailPanel* ImageSidebar::thumbnails() const { return m_thumbnails; }
 
