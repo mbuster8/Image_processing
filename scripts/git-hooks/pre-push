@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs the local CI (scripts/check.sh) before every push, so a push that would fail CI stops here instead.
+# Turn it on once per clone:     git config core.hooksPath scripts/git-hooks
+# Skip it for one push:          git push --no-verify
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

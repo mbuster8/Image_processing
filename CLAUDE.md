@@ -26,7 +26,10 @@ cmake --build --preset debug
 ctest --preset debug                  # all tests; -R <regex> to filter
 ctest --preset asan                   # sanitizers; undefined behaviour aborts the test
 cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF   # proves the libraries need no Qt
+scripts/check.sh                      # what CI runs, here: clang-format, debug, asan, Ubuntu in Docker
 ```
+
+Before a push or a pull request, run `scripts/check.sh`.
 
 Binaries land in `build/<preset>/`: `apps/viewer/visual_debug_viewer.app`,
 `apps/example_sender/visual_debug_example_sender.app`, `examples/pipeline_demo/pipeline_demo`,
@@ -39,7 +42,8 @@ and the bundles' `MACOSX_BUNDLE_BUNDLE_NAME`, and also name their settings and d
 `libs/visual_debug` (transport, no Qt) · `libs/viewer_core` (viewer logic, no Qt) · `apps/viewer` ·
 `apps/example_sender` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender}` ·
 `tests/{visual_debug,viewer_core,qt_common,viewer,example_sender,examples}` (`tests/qt_common` also holds
-the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macOS bundle icons).
+the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macOS bundle icons) · `scripts/`
+(`check.sh`, the Ubuntu package list, the pre-push hook) · `docker/` (the CI's Ubuntu job as a container).
 
 ## Rules that keep it working
 

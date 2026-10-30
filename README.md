@@ -92,6 +92,18 @@ cmake --build --preset asan             # into build/asan
 ctest --preset asan                     # the same tests under the sanitizers, about a minute
 ```
 
+### Check before a push
+
+```sh
+scripts/check.sh                        # what CI runs: clang-format, debug and asan here, Ubuntu in Docker
+scripts/check.sh --quick                # clang-format and debug only, about a minute
+scripts/check.sh --linux                # only the CI's Ubuntu job, in Docker
+```
+
+It stops at the first failing step and names it, so a push meets no surprises. The Ubuntu job needs Docker
+Desktop running. The [build guide](docs/build-guide.md#checking-changes-before-a-push) explains the steps, the
+logs and the optional pre-push hook.
+
 ### Run the programs
 
 Each preset puts the programs in its own folder: for the release build, write `build/release` where these
@@ -223,6 +235,8 @@ id-vision-lab/
 ├── resources/icons/       the apps' icons
 ├── docs/                  guides, wire format, architecture, decision records
 ├── cmake/                 warning, sanitizer and macOS icon settings
+├── scripts/               check.sh (the CI pipeline, locally), the Ubuntu package list, the pre-push hook
+├── docker/                the CI's Ubuntu job as a container
 ├── .github/               continuous integration, CodeQL and Dependabot
 ├── CMakeLists.txt
 ├── CMakePresets.json      debug, release and asan builds

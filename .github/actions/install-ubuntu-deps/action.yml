@@ -5,11 +5,7 @@ description: >
 runs:
   using: composite
   steps:
+    # The list lives in the script, which docker/ubuntu-24.04.Dockerfile runs too.
     - name: Install packages
       shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install --yes --no-install-recommends \
-          build-essential cmake ninja-build pkgconf \
-          qt6-base-dev qt6-qpa-plugins libgl-dev \
-          libopencv-dev libzmq3-dev cppzmq-dev nlohmann-json3-dev libgtest-dev
+      run: sudo bash scripts/install-ubuntu-deps.sh

@@ -141,6 +141,36 @@ The Qt tests create an offscreen `QApplication`, so they open no windows and als
 In the `asan` build, undefined behaviour aborts the program like a memory error, so it fails the test
 rather than printing a report into a passing run.
 
+## Checking changes before a push
+
+`scripts/check.sh` runs what continuous integration runs, on this machine:
+
+```sh
+scripts/check.sh            # clang-format, debug and asan here, and the Ubuntu job in Docker
+scripts/check.sh --quick    # clang-format and debug only (about a minute)
+scripts/check.sh --linux    # only the Ubuntu job in Docker
+```
+
+It prints one line per step and stops at the first failure, printing the end of that step's output; the full
+output of every step is in `build/check-logs/`. clang-format must be version 22.1.8: the script finds Qt
+Creator's bundled copy, a `clang-format` on `PATH`, or the one `CLANG_FORMAT` names.
+
+The Ubuntu job needs Docker Desktop running. It builds an image from `docker/ubuntu-24.04.Dockerfile` with the
+CI's packages (the first time takes a few minutes), then builds and tests a copy of the working tree in a
+throwaway container, with the C locale and Qt offscreen as on GitHub's runners. Your own `build/` folders are
+never touched. To look around inside the container, for example to run one failing test:
+
+```sh
+docker run --rm -it --volume "$PWD":/src:ro --entrypoint bash id-vision-lab-ubuntu
+```
+
+To run the full check before every `git push`, turn on the repository's hook once per clone:
+
+```sh
+git config core.hooksPath scripts/git-hooks   # off again: git config --unset core.hooksPath
+git push --no-verify                          # skips the hook for one push
+```
+
 ## Working in Qt Creator
 
 These steps are not covered by the automated tests: menu names follow Qt Creator 20.0.2 and are checked
@@ -208,13 +238,13 @@ in the user guide.
 
 ## Linux
 
-Continuous integration builds and tests every push on Ubuntu 24.04 with these packages, which give
-OpenCV 4.6 and Qt 6.4, the oldest versions supported (the list lives in
-[`.github/actions/install-ubuntu-deps`](../.github/actions/install-ubuntu-deps/action.yml)):
+Continuous integration builds and tests every push on Ubuntu 24.04 with the distribution's packages, which
+give OpenCV 4.6 and Qt 6.4, the oldest versions supported. The list lives in
+[`scripts/install-ubuntu-deps.sh`](../scripts/install-ubuntu-deps.sh), which CI and the Docker image both run;
+on an Ubuntu 24.04 machine:
 
 ```sh
-sudo apt install build-essential cmake ninja-build pkgconf qt6-base-dev qt6-qpa-plugins libgl-dev \
-    libopencv-dev libzmq3-dev cppzmq-dev nlohmann-json3-dev libgtest-dev
+sudo scripts/install-ubuntu-deps.sh
 ```
 
 Then build with the presets as above. With Qt older than 6.8 the **View → Appearance** menu is absent. The
