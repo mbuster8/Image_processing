@@ -3,8 +3,8 @@
 How to install the tools, build every part of the project, run the tests and work on it in Qt Creator.
 For running the programs, see the [user guide](user-guide.md).
 
-Verified on macOS 27.0.1 on Apple silicon (Mac mini), Apple clang 21, October 2026. Linux steps are written
-but not yet verified; Windows is planned for a separate session.
+Verified on macOS 27.0.1 on Apple silicon (Mac mini), Apple clang 21, October 2026. Continuous integration
+also builds and tests every push on Ubuntu 24.04; Windows is planned for a separate session.
 
 ## Prerequisites (macOS)
 
@@ -99,10 +99,10 @@ macOS.
 
 | Option | Default | Effect |
 |---|---|---|
-| `IMAGE_PROCESSING_BUILD_QT_APPS` | `ON` | The viewer, the example sender, `qt_common` and the Qt tests |
-| `IMAGE_PROCESSING_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender` and their tests |
-| `IMAGE_PROCESSING_BUILD_TESTS` | `ON` | All GoogleTest executables |
-| `IMAGE_PROCESSING_SANITIZERS` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer (the `asan` preset turns it on) |
+| `ID_VISION_LAB_BUILD_QT_APPS` | `ON` | The viewer, the example sender, `qt_common` and the Qt tests |
+| `ID_VISION_LAB_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender` and their tests |
+| `ID_VISION_LAB_BUILD_TESTS` | `ON` | All GoogleTest executables |
+| `ID_VISION_LAB_SANITIZERS` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer (the `asan` preset turns it on) |
 
 ### Building without Qt
 
@@ -110,7 +110,7 @@ The two libraries never use Qt. To prove it, or to build on a machine without Qt
 and build into a separate folder:
 
 ```sh
-cmake --preset debug -B build/no-qt -DIMAGE_PROCESSING_BUILD_QT_APPS=OFF
+cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF
 cmake --build build/no-qt
 ctest --test-dir build/no-qt               # the 170 tests that need no Qt
 ```
@@ -120,7 +120,7 @@ CMake then does not look for Qt at all; both libraries, both examples and their 
 ## Running the tests
 
 ```sh
-ctest --preset debug                       # everything (395 tests, about 50 seconds)
+ctest --preset debug                       # everything (397 tests, about 50 seconds)
 ctest --preset debug -R WireFormat         # only tests whose name matches a regular expression
 ctest --preset debug -R "Client|Server"
 ctest --preset asan                        # the same tests under the sanitizers (about a minute)
@@ -140,6 +140,41 @@ The Qt tests create an offscreen `QApplication`, so they open no windows and als
 
 In the `asan` build, undefined behaviour aborts the program like a memory error, so it fails the test
 rather than printing a report into a passing run.
+
+## Checking changes before a push
+
+`scripts/check.sh` runs what continuous integration runs, on this machine:
+
+```sh
+scripts/check.sh            # clang-format, debug and asan here, and the Ubuntu job in Docker
+scripts/check.sh --quick    # clang-format and debug only (about a minute)
+scripts/check.sh --linux    # only the Ubuntu job in Docker
+```
+
+It prints one line per step and stops at the first failure, printing the end of that step's output; the full
+output of every step is in `build/check-logs/`. clang-format must be version 22.1.8: the script finds Qt
+Creator's bundled copy, a `clang-format` on `PATH`, or the one `CLANG_FORMAT` names.
+
+The Ubuntu job needs Docker Desktop running. It builds an image from `docker/ubuntu-24.04.Dockerfile` with the
+CI's packages (the first time takes a few minutes), then builds and tests a copy of the working tree in a
+throwaway container, with the C locale and Qt offscreen as on GitHub's runners. Your own `build/` folders are
+never touched. To look around inside the container, for example to run one failing test:
+
+```sh
+docker run --rm -it --volume "$PWD":/src:ro --entrypoint bash id-vision-lab-ubuntu
+```
+
+To run the full check before every `git push`, turn on the repository's hook once per clone:
+
+```sh
+git config core.hooksPath scripts/git-hooks   # off again: git config --unset core.hooksPath
+git push --no-verify                          # skips the hook for one push
+```
+
+In Claude Code, two skills in `.claude/skills/` use the script: **`local-ci`** picks the mode for the change,
+runs it, reads the logs of a failing step and reproduces the failing test; **`pr-ready`** runs the full check,
+reviews the branch's changes against its base and drafts the pull request's title and description with the
+measured results. Neither pushes, commits or opens a pull request unless asked.
 
 ## Working in Qt Creator
 
@@ -206,18 +241,21 @@ or this project's `build` folder; otherwise, find out what the tool is first.
 See [Link the library from your own CMake project](user-guide.md#6-link-the-library-from-your-own-cmake-project)
 in the user guide.
 
-## Linux (not yet verified)
+## Linux
 
-On Ubuntu 24.04 or Debian 13 these packages should provide everything:
+Continuous integration builds and tests every push on Ubuntu 24.04 with the distribution's packages, which
+give OpenCV 4.6 and Qt 6.4, the oldest versions supported. The list lives in
+[`scripts/install-ubuntu-deps.sh`](../scripts/install-ubuntu-deps.sh), which CI and the Docker image both run;
+on an Ubuntu 24.04 machine:
 
 ```sh
-sudo apt install build-essential cmake ninja-build pkgconf qt6-base-dev libopencv-dev \
-    libzmq3-dev cppzmq-dev nlohmann-json3-dev libgtest-dev
+sudo scripts/install-ubuntu-deps.sh
 ```
 
-Then build with the presets as above. The presets add `/opt/homebrew/bin` to `PATH`, which is harmless on
-Linux because a missing folder on `PATH` is ignored. The apps are then plain executables rather than
-bundles, under the same names: `build/debug/apps/viewer/visual_debug_viewer` and
+Then build with the presets as above. With Qt older than 6.8 the **View → Appearance** menu is absent. The
+presets add `/opt/homebrew/bin` to `PATH`, which is harmless on Linux because a missing folder on `PATH` is
+ignored. The apps are then plain executables rather than bundles, under the same names:
+`build/debug/apps/viewer/visual_debug_viewer` and
 `build/debug/apps/example_sender/visual_debug_example_sender`. Their windows show their icons, but there is
 no desktop launcher for them yet.
 

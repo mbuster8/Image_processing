@@ -71,7 +71,7 @@ INSTANTIATE_TEST_SUITE_P(AllDepthsAndChannels, WireFormatRoundTrip,
                          testing::Combine(testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F,
                                                           CV_64F),
                                           testing::Range(1, 5)),
-                         [](const testing::TestParamInfo<WireFormatRoundTrip::ParamType> &info) {
+                         [](const testing::TestParamInfo<WireFormatRoundTrip::ParamType>& info) {
                              return depthLabel(std::get<0>(info.param)) + "C" +
                                     std::to_string(std::get<1>(info.param));
                          });
@@ -209,8 +209,14 @@ TEST(WireFormat, RejectsDeeplyNestedHeaderOnSecondaryThread) {
 // Every rejection case below starts from this header and pixel count, changing one thing, and sizes its
 // pixel frame as if that one change were accepted, so each case can only fail on the rule it names.
 nlohmann::ordered_json validHeader() {
-    return {{"protocol", "visual_debug"}, {"version", 2}, {"type", "image"}, {"name", "test"},
-            {"rows", 2},  {"cols", 3},     {"depth", "8U"}, {"channels", 1}};
+    return {{"protocol", "visual_debug"},
+            {"version", 2},
+            {"type", "image"},
+            {"name", "test"},
+            {"rows", 2},
+            {"cols", 3},
+            {"depth", "8U"},
+            {"channels", 1}};
 }
 constexpr std::size_t kValidPixelBytes = 2 * 3;
 

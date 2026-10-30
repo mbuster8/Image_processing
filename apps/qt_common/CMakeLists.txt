@@ -26,4 +26,4 @@ target_link_libraries(qt_common
         viewer_core::viewer_core
         visual_debug::visual_debug)
 
-image_processing_set_warnings(qt_common)
+id_vision_lab_set_warnings(qt_common)

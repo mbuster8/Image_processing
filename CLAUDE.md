@@ -1,9 +1,9 @@
-# CLAUDE.md — Image Processing: Visual Debug Viewer for OpenCV
+# CLAUDE.md — ID Vision Lab
 
-A 2013 thesis project revived in 2026: the `visual_debug` library sends a `cv::Mat` over ZeroMQ to the
-Visual Debug Viewer, a separate Qt 6 app with zoom, history and pixel readout; the Visual Debug Example
-Sender is a small Qt app that shows how to use the library. Read the linked documents rather than
-re-deriving them:
+A 2013 thesis project revived in 2026, public under Apache-2.0: the `visual_debug` library sends a
+`cv::Mat` over ZeroMQ to the Visual Debug Viewer, a separate Qt 6 app with zoom, history and pixel readout;
+the Visual Debug Example Sender is a small Qt app that shows how to use the library. Read the linked
+documents rather than re-deriving them:
 
 - [`docs/architecture.md`](docs/architecture.md): components, dependency rule, threads, transport, extension points
 - [`docs/wire-format.md`](docs/wire-format.md): the message format (authoritative)
@@ -18,6 +18,15 @@ re-deriving them:
 - Test-first for library code: write the failing GoogleTest, watch it fail, then implement.
 - `docs/superpowers/` (specs and plans) is git-ignored; nothing committed may link into it.
 
+## Accuracy
+
+- Check before stating: that an API exists, with that signature, in the versions this project supports
+  (OpenCV 4.6 and 5.x, Qt 6.4 and newer); a tool's or action's current version. Say what you could not check.
+- Numbers in docs, commits and reports (test counts, timings, sizes) come from a run in this session. Never
+  present an estimate as a measurement.
+- Say what was not done: tests not run, platforms not built, steps skipped.
+- Look facts up yourself; ask the owner only for decisions, with a recommendation.
+
 ## Commands
 
 ```sh
@@ -25,21 +34,27 @@ cmake --preset debug                  # also: release, asan
 cmake --build --preset debug
 ctest --preset debug                  # all tests; -R <regex> to filter
 ctest --preset asan                   # sanitizers; undefined behaviour aborts the test
-cmake --preset debug -B build/no-qt -DIMAGE_PROCESSING_BUILD_QT_APPS=OFF   # proves the libraries need no Qt
+cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF   # proves the libraries need no Qt
+scripts/check.sh                      # what CI runs, here: clang-format, debug, asan, Ubuntu in Docker
 ```
 
-Binaries land in `build/<preset>/`: `apps/viewer/visual_debug_viewer.app`,
-`apps/example_sender/visual_debug_example_sender.app`, `examples/pipeline_demo/pipeline_demo`,
-`examples/minimal_sender/minimal_sender`. The apps' file names are the same on every platform; their shown
-names ("Visual Debug Viewer", "Visual Debug Example Sender") live in `apps/qt_common/application_identity.h`
-and the bundles' `MACOSX_BUNDLE_BUNDLE_NAME`, and also name their settings and data folders.
+Before a push or a pull request, run `scripts/check.sh` (the `local-ci` skill); to prepare a pull request,
+use the `pr-ready` skill.
+
+The apps build as `build/<preset>/apps/viewer/visual_debug_viewer` and
+`build/<preset>/apps/example_sender/visual_debug_example_sender` (`.app` bundles on macOS). Their shown names
+live in `apps/qt_common/application_identity.h` and `MACOSX_BUNDLE_BUNDLE_NAME`, and also name their settings
+and data folders: renaming an app moves them.
 
 ## Layout
 
 `libs/visual_debug` (transport, no Qt) · `libs/viewer_core` (viewer logic, no Qt) · `apps/viewer` ·
 `apps/example_sender` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender}` ·
 `tests/{visual_debug,viewer_core,qt_common,viewer,example_sender,examples}` (`tests/qt_common` also holds
-the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macOS bundle icons).
+the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macOS bundle icons) · `scripts/`
+(`check.sh`, the Ubuntu package list, the pre-push hook) · `docker/` (the CI's Ubuntu job as a container) ·
+`.claude/skills/` (`local-ci`, `pr-ready`). Older commits use former names (`Image_processing`, Slovak
+identifiers): [`docs/former-names.md`](docs/former-names.md).
 
 ## Rules that keep it working
 
@@ -54,10 +69,10 @@ the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macO
   are fixed ASCII and never echo request bytes; the header is parsed without exceptions and never copied
   or dumped (a deeply nested header would overflow the worker's stack); the server binds loopback only
   unless `allowRemote` is set.
-- **Portability** (Windows comes next): no POSIX- or GNU-only APIs; paths through `std::filesystem` or
-  Qt; production code reads environment variables only through `visual_debug::defaultEndpoint()`; non-ASCII source is UTF-8
-  (MSVC gets `/utf-8`); OpenCV API must also exist in 4.x (OpenCV 5 moved some headers: guard them with
-  `__has_include`).
+- **Portability** (Windows comes next): no POSIX- or GNU-only APIs; paths through `std::filesystem` or Qt;
+  production code reads environment variables only through `visual_debug::defaultEndpoint()`; non-ASCII
+  source is UTF-8 (MSVC gets `/utf-8`); OpenCV API must also exist in 4.x (OpenCV 5 moved some headers:
+  guard them with `__has_include`).
 - **Warnings:** zero from project code under `-Wall -Wextra -Wpedantic`.
 - **UI tests run offscreen in the Fusion style**, so they cannot see macOS drawing (a `QToolBar`'s buttons
   lose their frames) or how a live appearance switch reaches child widgets (only as `PaletteChange`). Check
@@ -68,18 +83,6 @@ the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macO
 Files `snake_case.h/.cpp`; classes `PascalCase`; functions `camelCase`; members `m_`; constants
 `kPascalCase`; namespaces lower case; tests `<unit>_test.cpp`. British English in identifiers, comments, UI
 text and docs (`normalise`, `colour`); third-party names keep theirs (`cv::COLOR_BGR2RGB`). New-style Qt
-`connect`. No `using namespace` in headers. `.clang-format`: LLVM base, 4 spaces, 110 columns. Comments
-explain why.
-
-## Former names
-
-Until October 2026 the apps were "Image Processing" in `apps/image_processing` (now `apps/viewer`) and
-"Image Processing Client" in `apps/client` (now `apps/example_sender`); their tests were `qt_ui_tests` (now
-`viewer_ui_tests` and `qt_common_tests`) and `client_ui_tests` (now `example_sender_ui_tests`).
-
-For reading the oldest commits, the Slovak names: `klient` = the client (now the example sender) ·
-`Obrazky.qrc` = `resources.qrc` · `/zakladne` = `/icons` ·
-`TYP_UDAJOV` = the header's `type` · `nazov` = `name` · `sirka`/`vyska` = `cols`/`rows` · `lbl_Okno` =
-`ImageView` · `lbl_obrazok` = `previewLabel` · `menuNazov` = `menuFile` · `môj obrázok č.` = `<file name> #<n>`.
-`my_main_qlabel` became `ImageView` + `viewer_core::Viewport`; `My_label` became `ThumbnailPanel`;
-`mythread` became `visual_debug::Server` + `QtImageSink`.
+`connect`. No `using namespace` in headers. Comments explain why. `.clang-format`: LLVM base, 4 spaces,
+110 columns, pointers left; CI checks it with clang-format **22.1.8** exactly (Qt Creator's bundled copy,
+which `scripts/check.sh` finds); other versions format a few constructs differently.

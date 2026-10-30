@@ -1,4 +1,4 @@
 add_executable(minimal_sender main.cpp)
 target_link_libraries(minimal_sender PRIVATE opencv_imgproc visual_debug::visual_debug)
-image_processing_set_warnings(minimal_sender)
-image_processing_add_sanitizer_defaults(minimal_sender)
+id_vision_lab_set_warnings(minimal_sender)
+id_vision_lab_add_sanitizer_defaults(minimal_sender)

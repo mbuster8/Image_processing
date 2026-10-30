@@ -587,8 +587,7 @@ TEST(MainWindowTest, LogsReceivedImageWithItsReceivedTime) {
     EXPECT_EQ(received->kind, LogKind::Info);
     EXPECT_TRUE(received->text.contains(QStringLiteral("640×480"))) << received->text.toStdString();
     const QString pixelBytes = QLocale().formattedDataSize(640 * 480 * 3, 1, QLocale::DataSizeSIFormat);
-    EXPECT_TRUE(received->text.contains(pixelBytes))
-        << received->text.toStdString();
+    EXPECT_TRUE(received->text.contains(pixelBytes)) << received->text.toStdString();
     EXPECT_GE(received->time, before);
     EXPECT_LE(received->time, sent);
 }

@@ -1,4 +1,12 @@
-# Image Processing — Visual Debug Viewer for OpenCV
+# ID Vision Lab
+
+[![CI](https://github.com/mbuster8/id-vision-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/mbuster8/id-vision-lab/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/mbuster8/id-vision-lab/actions/workflows/codeql.yml/badge.svg)](https://github.com/mbuster8/id-vision-lab/actions/workflows/codeql.yml)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+
+A visual debugger for OpenCV, growing into a lab for reading identity documents by camera and by chip.
+
+## The Visual Debug Viewer
 
 An OpenCV program calls one function, and the image appears in the **Visual Debug Viewer**, a separate
 window where you can zoom into it, pan around and read the original value of any pixel, whether it is
@@ -14,7 +22,16 @@ visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
 brought it back: ported to Qt 6 and OpenCV 5, restructured, tested and documented. What changed, and why,
-is [below](#what-changed-since-2013).
+is [below](#what-changed-since-2013). Until October 2026 the repository was called `Image_processing`
+([former names](docs/former-names.md)).
+
+## Coming next
+
+- **Live channels** in the viewer, so a camera or video stream updates in place instead of filling the
+  history.
+- **The Document Lab**, a desktop app for developing document reading: it finds an identity document in a
+  camera image, checks capture quality, reads the machine-readable zone (MRZ), and reads the passport's chip
+  (ICAO 9303: BAC, PACE, Passive and Active Authentication) through a PC/SC reader.
 
 ## How it works
 
@@ -64,7 +81,7 @@ Run these from the repository root. The [build guide](docs/build-guide.md) and t
 ```sh
 cmake --preset debug                    # configure; once, or after changing a CMakeLists.txt
 cmake --build --preset debug            # build everything into build/debug
-ctest --preset debug                    # all 395 tests, about 50 seconds
+ctest --preset debug                    # all 397 tests, about 50 seconds
 ctest --preset debug -R ClientServer    # only the tests whose name matches
 
 cmake --preset release                  # an optimised build, into build/release
@@ -75,6 +92,19 @@ cmake --preset asan                     # Debug with AddressSanitizer and Undefi
 cmake --build --preset asan             # into build/asan
 ctest --preset asan                     # the same tests under the sanitizers, about a minute
 ```
+
+### Check before a push
+
+```sh
+scripts/check.sh                        # what CI runs: clang-format, debug and asan here, Ubuntu in Docker
+scripts/check.sh --quick                # clang-format and debug only, about a minute
+scripts/check.sh --linux                # only the CI's Ubuntu job, in Docker
+```
+
+It stops at the first failing step and names it, so a push meets no surprises. The Ubuntu job needs Docker
+Desktop running. The [build guide](docs/build-guide.md#checking-changes-before-a-push) explains the steps, the
+logs and the optional pre-push hook. In Claude Code, the `local-ci` skill runs the check and explains a
+failure, and the `pr-ready` skill runs it, reviews the branch and drafts the pull request's description.
 
 ### Run the programs
 
@@ -154,7 +184,7 @@ build/debug/apps/viewer/visual_debug_viewer.app/Contents/MacOS/visual_debug_view
 | C++ | pre-C++11 style: `0` for null, manual `new` and `delete` | C++20 |
 | Build | three qmake `.pro` files with hard-coded build paths | one CMake project with presets, warning-free under `-Wall -Wextra -Wpedantic` |
 | Message | a hand-packed binary header | a JSON header plus a pixel frame, validated field by field |
-| Tests | none | 389 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
+| Tests | none | 391 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
 | Documentation | one paragraph in `readme.txt` | this README, four guides and a decision record |
 
 ### Defects found in the 2013 code, and what fixed them
@@ -192,7 +222,7 @@ file: `photo.png #1`.
 ## Project layout
 
 ```
-Image_processing/
+id-vision-lab/
 ├── libs/
 │   ├── visual_debug/      the sender library and the viewer's server (no Qt)
 │   └── viewer_core/       the viewer's logic: display, history, pixel readout, zoom (no Qt)
@@ -207,12 +237,24 @@ Image_processing/
 ├── resources/icons/       the apps' icons
 ├── docs/                  guides, wire format, architecture, decision records
 ├── cmake/                 warning, sanitizer and macOS icon settings
+├── scripts/               check.sh (the CI pipeline, locally), the Ubuntu package list, the pre-push hook
+├── docker/                the CI's Ubuntu job as a container
+├── .github/               continuous integration, CodeQL and Dependabot
+├── .claude/skills/        Claude Code skills: local-ci and pr-ready
 ├── CMakeLists.txt
-└── CMakePresets.json      debug, release and asan builds
+├── CMakePresets.json      debug, release and asan builds
+├── LICENSE                Apache License 2.0
+└── NOTICE
 ```
 
 ## Status
 
-Builds and passes all tests on macOS with Apple silicon. Windows support (vcpkg, presets and a setup
-script) is the next step; the code is already written to be portable. Linux build steps are in the build
-guide but not yet verified.
+Builds and passes all tests on macOS with Apple silicon. Continuous integration builds and tests every push
+on macOS and on Ubuntu 24.04 (with the distribution's OpenCV 4 and Qt 6.4, the oldest versions supported).
+Windows support (vcpkg, presets and a setup script) is the next step; the code is already written to be
+portable.
+
+## Licence
+
+Copyright 2013, 2026 Matej Suster. Licensed under the [Apache License, Version 2.0](LICENSE); see also
+[NOTICE](NOTICE).

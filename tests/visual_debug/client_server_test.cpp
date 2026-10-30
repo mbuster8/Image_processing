@@ -350,6 +350,18 @@ TEST(ClientServer, RestartsOnTheSameEndpoint) {
     EXPECT_EQ(client.send(smallImage(), "after restart"), SendResult::Delivered);
 }
 
+// ZeroMQ closes a socket on a background thread, so stop() must wait for the port to be released: the
+// viewer's Stop says so, and Start may follow at once. A loaded machine (a CI runner) lost this race.
+TEST(ClientServer, StopReleasesThePortBeforeReturning) {
+    const auto endpoint = unusedEndpoint();
+    CollectingSink sink;
+    Server server(sink, {.endpoint = endpoint});
+    for (int cycle = 0; cycle < 10; ++cycle) {
+        ASSERT_TRUE(started(server)) << "cycle " << cycle;
+        server.stop();
+    }
+}
+
 TEST(ClientServer, StampsReceivedTime) {
     CollectingSink sink;
     Server server(sink, {.endpoint = kAnyLoopbackPort});

@@ -115,8 +115,14 @@ QPainterPath shapePath(OutlineIcon shape) {
     case OutlineIcon::Error:
         // An octagon, like a stop sign, so it differs from Info's circle at a glance.
         addPolyline(path,
-                    {{8.6, 3.75}, {15.4, 3.75}, {20.25, 8.6}, {20.25, 15.4}, {15.4, 20.25}, {8.6, 20.25},
-                     {3.75, 15.4}, {3.75, 8.6}},
+                    {{8.6, 3.75},
+                     {15.4, 3.75},
+                     {20.25, 8.6},
+                     {20.25, 15.4},
+                     {15.4, 20.25},
+                     {8.6, 20.25},
+                     {3.75, 15.4},
+                     {3.75, 8.6}},
                     true);
         addPolyline(path, {{12.0, 7.5}, {12.0, 13.0}});
         addDot(path, {12.0, 16.5});

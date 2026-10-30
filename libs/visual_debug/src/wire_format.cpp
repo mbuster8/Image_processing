@@ -217,7 +217,7 @@ std::variant<ImageMessage, DecodeError> decodeChecked(std::string_view headerTex
 
     // cv::Mat has no read-only view type; the clone is the only access, and gives the image its own pixels.
     const cv::Mat view(*rows, *cols, CV_MAKETYPE(depth->depth, *channels),
-                       const_cast<std::byte *>(pixels.data()));
+                       const_cast<std::byte*>(pixels.data()));
     return ImageMessage{nameText, view.clone()};
 }
 

@@ -62,7 +62,7 @@ Dependencies point one way: applications and examples depend on the libraries, n
 
 CMake enforces this: each library's `CMakeLists.txt` links only OpenCV, ZeroMQ and nlohmann/json;
 `qt_standard_project_setup()` and automatic `moc`, `uic` and `rcc` are switched on in `apps/CMakeLists.txt`
-only; and configuring with `-DIMAGE_PROCESSING_BUILD_QT_APPS=OFF` never looks for Qt, yet builds both
+only; and configuring with `-DID_VISION_LAB_BUILD_QT_APPS=OFF` never looks for Qt, yet builds both
 libraries, both examples and their tests. Library code that uses Qt fails to link in that build. A bare
 Qt `#include` may still compile, because Homebrew puts Qt's headers in the same shared include folder as
 ZeroMQ's, so code review has to catch those.

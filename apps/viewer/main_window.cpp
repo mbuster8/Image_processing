@@ -32,8 +32,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QPushButton>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -134,9 +134,8 @@ MainWindow::MainWindow(visual_debug::ServerOptions serverOptions, const QString&
     m_logSplitter->setStretchFactor(0, 1);
     m_logSplitter->setCollapsible(0, false);
     m_logSplitter->setCollapsible(1, false);
-    connect(m_logSplitter, &QSplitter::splitterMoved, this, [this] {
-        QSettings().setValue(kLogHeightKey, m_logSplitter->sizes().value(1));
-    });
+    connect(m_logSplitter, &QSplitter::splitterMoved, this,
+            [this] { QSettings().setValue(kLogHeightKey, m_logSplitter->sizes().value(1)); });
     // The divider marks the status bar's top edge.
     auto* central = new QWidget;
     auto* centralLayout = new QVBoxLayout(central);
@@ -393,8 +392,8 @@ void MainWindow::setLogOpen(bool open) {
         // Before the window is laid out the splitter has no height: the placeholder then takes what the
         // log leaves, as the stretch factors say.
         const int height = QSettings().value(kLogHeightKey, kDefaultLogHeight).toInt();
-        const int above = m_logSplitter->height() > height ? m_logSplitter->height() - height
-                                                           : kImageViewSizePlaceholder;
+        const int above =
+            m_logSplitter->height() > height ? m_logSplitter->height() - height : kImageViewSizePlaceholder;
         m_logSplitter->setSizes({above, height});
     }
     QSettings().setValue(kLogOpenKey, open);
@@ -427,7 +426,7 @@ bool MainWindow::addImage(std::string name, cv::Mat image, viewer_core::ImageOri
     // Timed when it arrived: for a received image, when the server thread finished decoding it.
     const auto& entry = *m_history.find(added.id);
     const QString what = origin.source == viewer_core::ImageSource::OpenedFile ? tr("Opened [%1] (%2)")
-                                                                                : tr("Received [%1] (%2)");
+                                                                               : tr("Received [%1] (%2)");
     const bool timed = origin.arrivedAt != std::chrono::system_clock::time_point{};
     m_log->append({timed ? origin.arrivedAt : std::chrono::system_clock::now(), LogKind::Info,
                    what.arg(singleLine(QString::fromStdString(entry.name)), imageDetails(entry))});

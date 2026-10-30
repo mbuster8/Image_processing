@@ -119,13 +119,14 @@ cv::Mat makeTestPattern(cv::Size size) {
     }
 
     const int shortSide = std::min(size.width, size.height);
-    cv::circle(pattern, {size.width / 4, size.height / 2}, shortSide / 6, cv::Scalar(255, 255, 255), cv::FILLED,
-               cv::LINE_AA);
+    cv::circle(pattern, {size.width / 4, size.height / 2}, shortSide / 6, cv::Scalar(255, 255, 255),
+               cv::FILLED, cv::LINE_AA);
     cv::rectangle(pattern, cv::Rect(size.width / 2, size.height / 4, size.width / 4, size.height / 3),
                   cv::Scalar(0, 0, 255), cv::FILLED);
     cv::line(pattern, {0, size.height - 1}, {size.width - 1, 0}, cv::Scalar(0, 0, 0), 3, cv::LINE_AA);
     cv::putText(pattern, "visual_debug", {size.width / 16, size.height - size.height / 10},
-                cv::FONT_HERSHEY_SIMPLEX, 1.5 * size.width / 640.0, cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
+                cv::FONT_HERSHEY_SIMPLEX, 1.5 * size.width / 640.0, cv::Scalar(255, 255, 255), 3,
+                cv::LINE_AA);
     return pattern;
 }
 

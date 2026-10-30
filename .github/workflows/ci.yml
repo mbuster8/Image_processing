@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The Qt tests run without a display, as they do locally.
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  macos:
+    name: macOS (Homebrew, latest OpenCV and Qt)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: brew install ninja pkgconf qt opencv zeromq cppzmq nlohmann-json googletest
+
+      - name: Configure, build and test (debug)
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug
+          ctest --preset debug
+
+      - name: Configure, build and test (AddressSanitizer and UndefinedBehaviorSanitizer)
+        run: |
+          cmake --preset asan
+          cmake --build --preset asan
+          ctest --preset asan
+
+  ubuntu:
+    name: Ubuntu 24.04 (OpenCV 4.6, Qt 6.4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-ubuntu-deps
+
+      - name: Configure, build and test (debug)
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug
+          ctest --preset debug
+
+      - name: Build and test without Qt (proves the libraries need none)
+        run: |
+          cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF
+          cmake --build build/no-qt
+          ctest --test-dir build/no-qt --output-on-failure
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same clang-format as Qt Creator's, so a file formatted in the IDE passes here.
+      - name: Install clang-format
+        run: pipx install clang-format==22.1.8
+
+      - name: Check formatting
+        run: git ls-files -z '*.cpp' '*.h' | xargs -0 clang-format --dry-run --Werror

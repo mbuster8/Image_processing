@@ -12,7 +12,7 @@ target_link_libraries(example_sender_ui
         visual_debug::visual_debug
     PRIVATE
         viewer_core::viewer_core)
-image_processing_set_warnings(example_sender_ui)
+id_vision_lab_set_warnings(example_sender_ui)
 
 # Resources belong to the executable: a static library's resources are dropped by the linker unless
 # initialised by hand.
@@ -25,9 +25,9 @@ set_target_properties(visual_debug_example_sender PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
     WIN32_EXECUTABLE ON)
-target_compile_definitions(visual_debug_example_sender PRIVATE IMAGE_PROCESSING_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(visual_debug_example_sender PRIVATE ID_VISION_LAB_VERSION="${PROJECT_VERSION}")
 target_link_libraries(visual_debug_example_sender PRIVATE example_sender_ui)
-image_processing_add_bundle_icon(visual_debug_example_sender
-                                 "${PROJECT_SOURCE_DIR}/resources/icons/example_sender_icon.png")
-image_processing_set_warnings(visual_debug_example_sender)
-image_processing_add_sanitizer_defaults(visual_debug_example_sender)
+id_vision_lab_add_bundle_icon(visual_debug_example_sender
+                              "${PROJECT_SOURCE_DIR}/resources/icons/example_sender_icon.png")
+id_vision_lab_set_warnings(visual_debug_example_sender)
+id_vision_lab_add_sanitizer_defaults(visual_debug_example_sender)

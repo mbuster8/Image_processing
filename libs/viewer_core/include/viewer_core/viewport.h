@@ -13,7 +13,7 @@ public:
     static constexpr double kZoomStep = 1.25; // per mouse-wheel notch
     static constexpr double kMinVisiblePixels = 3.0;
 
-    void setImageSize(cv::Size size); // and fit
+    void setImageSize(cv::Size size);  // and fit
     void setViewSize(cv::Size2d size); // keeps the image point at the centre of the view
     void fit();
     // Zooms by kZoomStep^steps, keeping the image point under viewPoint where it is. Steps may be
