@@ -55,7 +55,9 @@ public:
                               "]: not a loopback address, and remote connections are not allowed"};
         }
 
-        zmq::socket_t socket(m_context, zmq::socket_type::rep);
+        // A context per start, so that stop() can terminate it: see stop().
+        m_context.emplace();
+        zmq::socket_t socket(*m_context, zmq::socket_type::rep);
         socket.set(zmq::sockopt::linger, 0);
         socket.set(zmq::sockopt::maxmsgsize, static_cast<std::int64_t>(kMaxPixelBytes));
         socket.set(zmq::sockopt::rcvhwm, kReceiveQueueLength);
@@ -77,11 +79,15 @@ public:
         return std::nullopt;
     }
 
+    // ZeroMQ closes a socket on its own background thread, so the port is still taken when the worker has
+    // returned. Terminating the context waits for that, so the port is free when stop() returns and an
+    // immediate start() can bind it again.
     void stop() {
         m_stopRequested = true;
         if (m_worker.joinable()) {
             m_worker.join();
         }
+        m_context.reset();
     }
 
     bool isRunning() const { return m_worker.joinable(); }
@@ -153,7 +159,7 @@ private:
 
     ImageSink& m_sink;
     ServerOptions m_options;
-    zmq::context_t m_context;
+    std::optional<zmq::context_t> m_context;
     std::thread m_worker; // owns the socket; joined before the context is destroyed
     std::atomic<bool> m_stopRequested{false};
     std::atomic<bool> m_paused{false};

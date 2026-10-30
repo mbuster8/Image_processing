@@ -80,7 +80,7 @@ Run these from the repository root. The [build guide](docs/build-guide.md) and t
 ```sh
 cmake --preset debug                    # configure; once, or after changing a CMakeLists.txt
 cmake --build --preset debug            # build everything into build/debug
-ctest --preset debug                    # all 395 tests, about 50 seconds
+ctest --preset debug                    # all 397 tests, about 50 seconds
 ctest --preset debug -R ClientServer    # only the tests whose name matches
 
 cmake --preset release                  # an optimised build, into build/release
@@ -170,7 +170,7 @@ build/debug/apps/viewer/visual_debug_viewer.app/Contents/MacOS/visual_debug_view
 | C++ | pre-C++11 style: `0` for null, manual `new` and `delete` | C++20 |
 | Build | three qmake `.pro` files with hard-coded build paths | one CMake project with presets, warning-free under `-Wall -Wextra -Wpedantic` |
 | Message | a hand-packed binary header | a JSON header plus a pixel frame, validated field by field |
-| Tests | none | 389 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
+| Tests | none | 391 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
 | Documentation | one paragraph in `readme.txt` | this README, four guides and a decision record |
 
 ### Defects found in the 2013 code, and what fixed them
