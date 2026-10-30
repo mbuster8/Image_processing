@@ -9,12 +9,13 @@
 
 #include <optional>
 
+class DisplaySettingsControl;
 class QLabel;
 class QLineEdit;
 class QToolButton;
 
-// One line above the image: its name, a pencil that renames it in place, and its details. Hidden while no
-// image is shown.
+// One line above the image: its name, a pencil that renames it in place, its details, and at the right end
+// the display range and colours. Hidden while no image is shown.
 class ImageInfoBar : public QWidget {
     Q_OBJECT
 
@@ -23,6 +24,7 @@ public:
 
     void showImage(viewer_core::ImageId id, const QString& name, const QString& details);
     void clear();
+    DisplaySettingsControl* displayControl() const;
 
     // Swaps the name for a text field, bound to the image shown now. Enter or leaving the field saves; Esc
     // cancels. Nothing while no image is shown.
@@ -46,6 +48,7 @@ private:
     QLineEdit* m_editor;
     QToolButton* m_renameButton;
     QLabel* m_details;
+    DisplaySettingsControl* m_displayControl;
     std::optional<viewer_core::ImageId> m_shownId;
     QString m_shownName;
     std::optional<viewer_core::ImageId> m_renamingId;

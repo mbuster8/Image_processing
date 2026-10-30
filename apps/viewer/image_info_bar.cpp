@@ -1,5 +1,6 @@
 #include "image_info_bar.h"
 
+#include "display_settings_control.h"
 #include "display_text.h"
 #include "eliding_label.h"
 #include "outline_icons.h"
@@ -22,7 +23,8 @@ constexpr int kVerticalMargin = 2;
 
 ImageInfoBar::ImageInfoBar(QWidget* parent)
     : QWidget(parent), m_name(new ElidingLabel(Qt::ElideMiddle)), m_editor(new QLineEdit),
-      m_renameButton(new QToolButton), m_details(new ElidingLabel(Qt::ElideRight)) {
+      m_renameButton(new QToolButton), m_details(new ElidingLabel(Qt::ElideRight)),
+      m_displayControl(new DisplaySettingsControl) {
     m_name->setObjectName(QStringLiteral("imageName"));
     m_editor->setObjectName(QStringLiteral("renameEditor"));
     m_renameButton->setObjectName(QStringLiteral("renameButton"));
@@ -44,6 +46,7 @@ ImageInfoBar::ImageInfoBar(QWidget* parent)
     layout->addWidget(m_renameButton);
     layout->addWidget(m_details);
     layout->addStretch();
+    layout->addWidget(m_displayControl); // after the stretch, so it stays put while the text changes
 
     connect(m_renameButton, &QToolButton::clicked, this, &ImageInfoBar::startRename);
     // Enter, and leaving the field, as in Finder.
@@ -67,6 +70,8 @@ void ImageInfoBar::clear() {
     m_shownName.clear();
     hide();
 }
+
+DisplaySettingsControl* ImageInfoBar::displayControl() const { return m_displayControl; }
 
 void ImageInfoBar::startRename() {
     if (!m_shownId) {

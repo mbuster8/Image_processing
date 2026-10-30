@@ -6,6 +6,8 @@ add_library(viewer_ui STATIC
     activity_log_panel.h
     data_folder.cpp
     data_folder.h
+    display_settings_control.cpp
+    display_settings_control.h
     display_text.cpp
     display_text.h
     divider_splitter.cpp

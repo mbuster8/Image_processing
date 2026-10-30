@@ -41,6 +41,11 @@
      <string>&amp;View</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuImage">
+    <property name="title">
+     <string>&amp;Image</string>
+    </property>
+   </widget>
    <widget class="QMenu" name="menuHistory">
     <property name="title">
      <string>&amp;History</string>
@@ -59,6 +64,7 @@
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
+   <addaction name="menuImage"/>
    <addaction name="menuServer"/>
    <addaction name="menuHistory"/>
   </widget>

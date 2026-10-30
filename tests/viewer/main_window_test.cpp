@@ -4,6 +4,7 @@
 #include "appearance.h"
 #include "control_checks.h"
 #include "data_folder.h"
+#include "display_settings_control.h"
 #include "display_text.h"
 #include "epoch_time.h"
 #include "image_info_bar.h"
@@ -35,6 +36,7 @@
 #include <QMenuBar>
 #include <QPalette>
 #include <QPoint>
+#include <QPushButton>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QSplitter>
@@ -836,13 +838,130 @@ TEST(MainWindowTest, MenusAreInTheirOrder) {
     const auto window = makeTestWindow();
     EXPECT_EQ(entryTitles(window->menuBar()->actions()),
               (QStringList{QStringLiteral("File"), QStringLiteral("Edit"), QStringLiteral("View"),
-                           QStringLiteral("Server"), QStringLiteral("History"), QStringLiteral("Help")}));
+                           QStringLiteral("Image"), QStringLiteral("Server"), QStringLiteral("History"),
+                           QStringLiteral("Help")}));
+    EXPECT_EQ(entryTitles(window->findChild<QMenu*>(QStringLiteral("menuImage"))->actions()),
+              (QStringList{QStringLiteral("Range"), QStringLiteral("Colours")}));
     QStringList view{QStringLiteral("Show in Sidebar"), QStringLiteral("Sort By"), QStringLiteral("-"),
                      QStringLiteral("Show Log")};
     if (qt_common::canChooseAppearance()) {
         view << QStringLiteral("-") << QStringLiteral("Appearance");
     }
     EXPECT_EQ(entryTitles(window->findChild<QMenu*>(QStringLiteral("menuView"))->actions()), view);
+}
+
+// --- Display range and colours ----------------------------------------------------------------------------
+
+DisplaySettingsControl* displayControlOf(MainWindow& window) {
+    return window.findChild<DisplaySettingsControl*>();
+}
+
+QAction* entryTitled(const QMenu* menu, const QString& title) {
+    for (QAction* entry : menu->actions()) {
+        if (entry->text().remove(u'&') == title) {
+            return entry;
+        }
+    }
+    return nullptr;
+}
+
+QMenu* imageSubmenu(MainWindow& window, const QString& title) {
+    const QAction* entry = entryTitled(window.findChild<QMenu*>(QStringLiteral("menuImage")), title);
+    return entry != nullptr ? entry->menu() : nullptr;
+}
+
+QString buttonText(MainWindow& window, const char* name) {
+    return displayControlOf(window)->findChild<QToolButton*>(QString::fromLatin1(name))->text();
+}
+
+void applyFixedRange(MainWindow& window, const QString& minimum, const QString& maximum) {
+    DisplaySettingsControl* control = displayControlOf(window);
+    entryTitled(control->rangeMenu(), QStringLiteral("Fixed…"))->trigger();
+    control->findChild<QLineEdit*>(QStringLiteral("fixedMinimum"))->setText(minimum);
+    control->findChild<QLineEdit*>(QStringLiteral("fixedMaximum"))->setText(maximum);
+    control->findChild<QPushButton*>(QStringLiteral("applyFixedRange"))->click();
+}
+
+// The grey level at the middle of the picture in the view, which a fitted image fills.
+int viewedGrey(MainWindow& window) {
+    QImage view = window.findChild<ImageView*>()->grab().toImage();
+    return view.pixelColor(view.width() / 2, view.height() / 2).red();
+}
+
+int thumbnailGrey(MainWindow& window, ImageId id) {
+    const auto* model = panelOf(window)->findChild<ThumbnailModel*>(); // the view's own model is a filter
+    if (model == nullptr) {
+        return -1;
+    }
+    const QImage thumbnail = model->thumbnail(id, QSize(16, 16)).toImage();
+    return thumbnail.pixelColor(thumbnail.width() / 2, thumbnail.height() / 2).red();
+}
+
+// The view, Copy Image and Save As show the range; the thumbnail keeps the stored picture.
+TEST(MainWindowTest, RangeChangesTheViewAndCopyButNotTheThumbnail) {
+    const auto window = makeTestWindow();
+    window->resize(800, 600);
+    window->show();
+    window->addImage("a", cv::Mat(40, 40, CV_8UC1, cv::Scalar(100)));
+    QApplication::processEvents();
+    ASSERT_EQ(viewedGrey(*window), 100);
+
+    applyFixedRange(*window, QStringLiteral("0"), QStringLiteral("50"));
+    QApplication::processEvents();
+
+    EXPECT_EQ(viewedGrey(*window), 255);
+    window->copyImage(1);
+    EXPECT_EQ(QGuiApplication::clipboard()->image().pixelColor(20, 20).red(), 255);
+    EXPECT_EQ(thumbnailGrey(*window, 1), 100);
+    EXPECT_EQ(buttonText(*window, "rangeButton"), QStringLiteral("Range: Fixed ▾"));
+}
+
+TEST(MainWindowTest, SettingsFollowTheName) {
+    const auto window = makeTestWindow();
+    window->addImage("a", makeImage());
+    imageSubmenu(*window, QStringLiteral("Colours"))->actions().at(1)->trigger(); // Turbo
+    window->addImage("b", makeImage());
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Grey ▾"));
+
+    panelOf(*window)->selectImage(1);
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Turbo ▾"));
+    window->addImage("a", makeImage()); // another image of the same name
+    EXPECT_EQ(window->shownImageId(), std::optional<ImageId>(3));
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Turbo ▾"));
+}
+
+TEST(MainWindowTest, RenameCarriesTheSettings) {
+    const auto window = makeTestWindow();
+    window->addImage("a", makeImage());
+    imageSubmenu(*window, QStringLiteral("Colours"))->actions().at(2)->trigger(); // Viridis
+
+    window->renameImage(1, QStringLiteral("z"));
+    window->addImage("a", makeImage());
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Grey ▾"));
+
+    panelOf(*window)->selectImage(1);
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Viridis ▾"));
+}
+
+TEST(MainWindowTest, ImageMenuMirrorsTheControl) {
+    const auto window = makeTestWindow();
+    DisplaySettingsControl* control = displayControlOf(*window);
+    QMenu* range = imageSubmenu(*window, QStringLiteral("Range"));
+    QMenu* colours = imageSubmenu(*window, QStringLiteral("Colours"));
+    ASSERT_NE(range, nullptr);
+    ASSERT_NE(colours, nullptr);
+    EXPECT_NE(range, control->rangeMenu()); // a native menu has one parent
+    EXPECT_EQ(range->actions(), control->rangeMenu()->actions());
+    EXPECT_EQ(colours->actions(), control->coloursMenu()->actions());
+    EXPECT_FALSE(window->findChild<QMenu*>(QStringLiteral("menuImage"))->isEnabled()); // nothing shown
+
+    window->addImage("colour", cv::Mat(3, 4, CV_8UC3, cv::Scalar(1, 2, 3)));
+    EXPECT_TRUE(window->findChild<QMenu*>(QStringLiteral("menuImage"))->isEnabled());
+    EXPECT_FALSE(colours->actions().at(1)->isEnabled()); // colour maps are for single-channel images
+
+    window->addImage("grey", makeImage());
+    colours->actions().at(1)->trigger();
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Turbo ▾"));
 }
 
 // Not started: the event loop does not run, so the fixed port is never bound.

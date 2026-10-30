@@ -86,6 +86,7 @@ if(ID_VISION_LAB_BUILD_QT_APPS)
             viewer/activity_log_panel_test.cpp
             viewer/activity_log_test.cpp
             viewer/data_folder_test.cpp
+            viewer/display_settings_control_test.cpp
             viewer/image_info_bar_test.cpp
             viewer/image_sidebar_test.cpp
             viewer/image_store_test.cpp

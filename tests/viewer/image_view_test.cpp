@@ -76,6 +76,33 @@ TEST_F(ImageViewTest, ReportsPixelUnderCursorAfterZoomingOutToFit) {
     EXPECT_EQ(hovered.last().at(1).toInt(), 90);
 }
 
+// A new picture of the same image (another display range, the next frame) keeps the zoom and pan.
+TEST_F(ImageViewTest, KeepViewHoldsTheZoomForTheSameSize) {
+    sendWheelEvent(m_view, {20, 20}, 4 * 120);
+    sendMouseEvent(m_view, QEvent::MouseMove, {180, 180}, Qt::NoButton); // over image pixel (42, 42)
+    QSignalSpy hovered(&m_view, &ImageView::pixelHovered);
+
+    m_view.setImage(filledImage(100, 100), ImageView::KeepView::IfSameSize);
+    ASSERT_EQ(hovered.size(), 1);
+    EXPECT_EQ(hovered.last().at(0).toInt(), 42);
+
+    m_view.setImage(filledImage(100, 100)); // an image of its own is fitted
+    ASSERT_EQ(hovered.size(), 2);
+    EXPECT_EQ(hovered.last().at(0).toInt(), 90);
+}
+
+TEST_F(ImageViewTest, KeepViewRefitsANewSize) {
+    sendWheelEvent(m_view, {20, 20}, 4 * 120);
+    sendMouseEvent(m_view, QEvent::MouseMove, {100, 100}, Qt::NoButton);
+    QSignalSpy hovered(&m_view, &ImageView::pixelHovered);
+
+    m_view.setImage(filledImage(400, 400), ImageView::KeepView::IfSameSize);
+
+    ASSERT_EQ(hovered.size(), 1);
+    EXPECT_EQ(hovered.last().at(0).toInt(), 200); // fitted: the centre of the new image
+    EXPECT_EQ(hovered.last().at(1).toInt(), 200);
+}
+
 // The view's pixel at (x, y) in widget coordinates.
 QColor pixelOf(ImageView& view, int x, int y) {
     const QImage grabbed = view.grab().toImage();

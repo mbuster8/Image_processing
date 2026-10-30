@@ -14,9 +14,13 @@ class ImageView : public QWidget {
     Q_OBJECT
 
 public:
+    // IfSameSize keeps the zoom and pan for a new picture of the same size: another display range of the
+    // shown image, or a live channel's next frame. Any other picture is fitted to the view.
+    enum class KeepView { No, IfSameSize };
+
     explicit ImageView(QWidget* parent = nullptr);
 
-    void setImage(const QImage& image); // shown fitted to the view
+    void setImage(const QImage& image, KeepView keep = KeepView::No);
     void clear();
     bool hasImage() const;
 

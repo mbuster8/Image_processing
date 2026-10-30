@@ -35,9 +35,12 @@ ImageView::ImageView(QWidget* parent) : QWidget(parent) {
     setMinimumSize(200, 200);
 }
 
-void ImageView::setImage(const QImage& image) {
+void ImageView::setImage(const QImage& image, KeepView keep) {
+    const bool sameSize = !m_image.isNull() && image.size() == m_image.size();
     m_image = image;
-    m_viewport.setImageSize({image.width(), image.height()});
+    if (keep == KeepView::No || !sameSize) {
+        m_viewport.setImageSize({image.width(), image.height()});
+    }
     update();
     // A new image under a resting cursor: report its pixel, or the readout would show the old image's.
     if (m_hoverPosition) {

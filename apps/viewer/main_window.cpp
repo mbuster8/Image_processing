@@ -5,6 +5,7 @@
 #include "appearance.h"
 #include "application_identity.h"
 #include "controls.h"
+#include "display_settings_control.h"
 #include "display_text.h"
 #include "divider_splitter.h"
 #include "eliding_label.h"
@@ -19,6 +20,7 @@
 #include "thumbnail_panel.h"
 #include "ui_main_window.h"
 
+#include "viewer_core/display_converter.h"
 #include "viewer_core/pixel_inspector.h"
 #include "viewer_core/save_name.h"
 #include "visual_debug/wire_format.h"
@@ -205,6 +207,18 @@ MainWindow::MainWindow(visual_debug::ServerOptions serverOptions, const QString&
     m_ui->menuView->addAction(m_ui->actionShowLog);
     connect(m_ui->actionShowLog, &QAction::triggered, this, &MainWindow::setLogOpen);
     qt_common::addAppearanceMenu(m_ui->menuView);
+    // The Image menu holds the info strip's own range and colour actions, in menus of its own: a native macOS
+    // menu has one parent.
+    DisplaySettingsControl* displayControl = m_infoBar->displayControl();
+    for (QMenu* shared : {displayControl->rangeMenu(), displayControl->coloursMenu()}) {
+        m_ui->menuImage->addMenu(shared->title())->addActions(shared->actions());
+    }
+    displayControl->setAutoRangeProvider([this] {
+        const auto* entry = m_currentId ? m_history.find(*m_currentId) : nullptr;
+        return entry != nullptr ? viewer_core::autoRange(entry->original) : viewer_core::DisplayRange{};
+    });
+    connect(displayControl, &DisplaySettingsControl::settingsChanged, this,
+            &MainWindow::changeDisplaySettings);
     qt_common::addHelpMenu(menuBar(), QCoreApplication::translate("About", qt_common::kViewerDescription));
     // Another viewer may have changed the shared setting since.
     const auto showKeepImages = [this] { m_ui->actionKeepImages->setChecked(keepImagesSetting()); };
@@ -457,6 +471,10 @@ void MainWindow::renameImage(viewer_core::ImageId id, QString name) {
         return;
     }
     const QString oldName = singleLine(QString::fromStdString(entry->name));
+    // The display settings go with the name.
+    const viewer_core::DisplaySettings settings = m_displaySettings.get(entry->name);
+    m_displaySettings.set(entry->name, {});
+    m_displaySettings.set(cut, settings);
     m_history.rename(id, std::move(cut));
     log(LogKind::Info,
         tr("Renamed [%1] to [%2]").arg(oldName, singleLine(QString::fromStdString(entry->name))));
@@ -514,17 +532,17 @@ void MainWindow::undoDelete() {
     updateEditActions();
 }
 
-// The displayed 8-bit picture: other programs cannot take the original's depths.
+// The displayed 8-bit picture, range and colours included: other programs cannot take the original's depths.
 void MainWindow::copyImage(viewer_core::ImageId id) {
     if (const auto* entry = m_history.find(id)) {
-        QGuiApplication::clipboard()->setImage(qt_common::toQImage(entry->display));
+        QGuiApplication::clipboard()->setImage(shownPicture(*entry));
         log(LogKind::Info,
             tr("Copied [%1] to the clipboard").arg(singleLine(QString::fromStdString(entry->name))));
     }
 }
 
-// Saves what is on screen (the 8-bit display image), not the original: PNG and JPEG cannot hold every
-// depth. QImage::save is used because cv::imwrite would swap red and blue in an RGBA image.
+// Saves what is on screen (the 8-bit picture, range and colours included), not the original: PNG and JPEG
+// cannot hold every depth. QImage::save is used because cv::imwrite would swap red and blue in an RGBA image.
 void MainWindow::saveImage(viewer_core::ImageId id) {
     const auto* entry = m_history.find(id);
     if (entry == nullptr) {
@@ -543,7 +561,7 @@ void MainWindow::saveImage(viewer_core::ImageId id) {
         path += QStringLiteral(".png");
     }
     const QString shownPath = QDir::toNativeSeparators(path);
-    if (qt_common::toQImage(entry->display).save(path)) {
+    if (shownPicture(*entry).save(path)) {
         log(LogKind::Info, tr("Saved [%1]").arg(shownPath));
     } else {
         log(LogKind::Error, tr("Could not save [%1]").arg(shownPath));
@@ -556,9 +574,28 @@ void MainWindow::showImage(viewer_core::ImageId id) {
         return;
     }
     m_currentId = id;
-    m_imageView->setImage(qt_common::toQImage(entry->display));
+    m_imageView->setImage(shownPicture(*entry));
+    m_infoBar->displayControl()->setState(m_displaySettings.get(entry->name),
+                                          entry->original.channels() == 1);
     showImageText(*entry);
     updateEditActions();
+}
+
+QImage MainWindow::shownPicture(const viewer_core::ReceivedImage& entry) const {
+    const viewer_core::DisplaySettings settings = m_displaySettings.get(entry.name);
+    return qt_common::toQImage(settings == viewer_core::DisplaySettings{}
+                                   ? entry.display
+                                   : viewer_core::toDisplayImage(entry.original, settings));
+}
+
+// For the shown image's name, so every image of that name, and later arrivals, look the same.
+void MainWindow::changeDisplaySettings(const viewer_core::DisplaySettings& settings) {
+    const auto* entry = m_currentId ? m_history.find(*m_currentId) : nullptr;
+    if (entry == nullptr) {
+        return;
+    }
+    m_displaySettings.set(entry->name, settings);
+    m_imageView->setImage(shownPicture(*entry), ImageView::KeepView::IfSameSize);
 }
 
 // Selecting it in the sidebar shows it; one the search hides is shown without a selection.
@@ -668,6 +705,7 @@ void MainWindow::updateEditActions() {
     m_ui->actionCopyImage->setEnabled(shown && !typing);
     m_ui->actionDelete->setEnabled(shown && !typing);
     m_ui->actionClearHistory->setEnabled(m_history.size() > 0);
+    m_ui->menuImage->setEnabled(shown);
 }
 
 void MainWindow::showPixel(int x, int y) {

@@ -6,10 +6,12 @@
 #include "server_controls.h"
 #include "storage_controller.h"
 
+#include "viewer_core/display_settings.h"
 #include "viewer_core/image_history.h"
 #include "visual_debug/server.h"
 #include "visual_debug/wire_format.h"
 
+#include <QImage>
 #include <QMainWindow>
 #include <QString>
 
@@ -88,6 +90,10 @@ private:
     void showImage(viewer_core::ImageId id);
     void selectAndShow(viewer_core::ImageId id);
     void showImageText(const viewer_core::ReceivedImage& entry);
+    // The picture the view, Copy Image and Save As show: the stored display picture, or one drawn with the
+    // display settings of the entry's name.
+    QImage shownPicture(const viewer_core::ReceivedImage& entry) const;
+    void changeDisplaySettings(const viewer_core::DisplaySettings& settings);
     void clearView();
     void startRename(viewer_core::ImageId id);
     void dropFromView(viewer_core::ImageId id);
@@ -105,6 +111,7 @@ private:
     // A copy's name obeys the wire format's limit, as received and renamed names do.
     viewer_core::ImageHistory m_history{viewer_core::kDefaultHistoryCapacity,
                                         viewer_core::kDefaultHistoryByteBudget, visual_debug::kMaxNameBytes};
+    viewer_core::DisplaySettingsStore m_displaySettings; // by name, for this session
     std::unique_ptr<StorageController> m_storage; // reset first when closing, while the history still exists
     // Declared before the server, so the server's thread has stopped before the sink is destroyed.
     QtImageSink m_sink;
