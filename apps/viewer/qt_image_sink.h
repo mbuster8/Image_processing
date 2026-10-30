@@ -41,7 +41,8 @@ public:
     // Open live channels; a frame for a new one beyond these is refused as "too many live channels",
     // unless a channel has been idle for kLiveIdleAfter, which then makes room.
     static constexpr int kMaxLiveChannels = 8;
-    // The newest frames of all open channels together; a new channel that would exceed it is refused too.
+    // The newest frames of all open channels together; any frame that would take them past it is refused
+    // too, unless closing idle channels makes room.
     static constexpr std::size_t kMaxLiveBytes = std::size_t{1} << 30;
     static constexpr std::chrono::seconds kLiveIdleAfter{5};
 
@@ -95,8 +96,9 @@ private:
     };
 
     visual_debug::Acceptance takeLiveFrame(visual_debug::ImageMessage message); // with m_mutex held
-    bool roomForNewChannel(std::size_t bytes) const;
-    bool evictLongestIdle(Clock::time_point now);
+    bool roomFor(const std::string& name, std::size_t bytes) const;
+    // Closes the channel idle longest, but never `keep`; false when none is idle.
+    bool evictLongestIdle(Clock::time_point now, const std::string& keep);
     bool noteLiveNews(); // true when the UI must be told
 
     std::function<Clock::time_point()> m_now;

@@ -1734,6 +1734,45 @@ TEST(MainWindowTest, NinthChannelIsLoggedOncePerName) {
     EXPECT_EQ(livePanelOf(*window)->channelNames().size(), 8);
 }
 
+// A sender that numbers its channel names makes every frame a new channel: the log names the first few it
+// refuses and counts the rest, coalesced like other rejections.
+TEST(MainWindowTest, NumberedChannelNamesDoNotFloodTheLog) {
+    const auto window = makeTestWindow();
+    for (int i = 1; i <= 8; ++i) {
+        ASSERT_EQ(feedLive(*window, "cam" + std::to_string(i), liveFrame(i)),
+                  visual_debug::Acceptance::Taken);
+    }
+    QApplication::processEvents();
+
+    for (int i = 0; i < 100; ++i) {
+        ASSERT_EQ(feedLive(*window, "frame " + std::to_string(i), liveFrame(i)),
+                  visual_debug::Acceptance::TooManyLiveChannels);
+        window->sinkForTests().onRequestRejected("too many live channels"); // as the server does
+        QApplication::processEvents();
+    }
+
+    const ActivityLog* log = logOf(*window);
+    EXPECT_EQ(countEntries(*log, QStringLiteral("Refused live channel")), 8);
+    EXPECT_EQ(countEntries(*log, QStringLiteral("[too many live channels]")), 1);
+}
+
+// Every depth the wire format takes, in frames taller than a row, so each row's picture is shrunk.
+TEST(MainWindowTest, LiveRowsTakeEveryDepth) {
+    ClockedWindow clocked;
+    MainWindow& window = *clocked.window;
+    for (const int depth : {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F}) {
+        ASSERT_EQ(feedLive(window, "depth " + std::to_string(depth),
+                           cv::Mat(480, 640, CV_MAKETYPE(depth, 1), cv::Scalar(depth))),
+                  visual_debug::Acceptance::Taken)
+            << depth;
+        QApplication::processEvents();
+    }
+    clocked.now += 1s;
+    window.tick(clocked.now);
+
+    EXPECT_EQ(livePanelOf(window)->channelNames().size(), 7);
+}
+
 // (Q3) A ninth channel takes the place of one that has gone idle.
 TEST(MainWindowTest, IdleChannelMakesRoomInTheWindow) {
     ClockedWindow clocked;

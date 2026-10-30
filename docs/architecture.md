@@ -126,9 +126,11 @@ sequenceDiagram
 **The sink never makes a live sender wait.** Live frames do not use the eight slots or the 200 ms wait:
 each channel keeps only its newest waiting frame, so a sender faster than the screen loses frames in the
 viewer (counted as dropped), never time, and the sink holds at most one waiting frame per channel. It opens
-at most 8 channels and refuses a new one whose frame would take the open channels' frames past 1 GiB; a
-channel without a frame for 5 s is idle, and the longest-idle one is closed to make room. A refused frame
-is answered `too many live channels`, and the UI logs each refused name once.
+at most 8 channels and refuses any frame, of a new channel or an open one, that would take the open
+channels' newest frames past 1 GiB; a channel without a frame for 5 s is idle, and the longest-idle one
+(never the frame's own channel) is closed to make room. A refused frame is answered `too many live
+channels`. The UI logs each refused name once, for up to 8 names; a sender that numbers its channel names
+would otherwise cost the log a line per frame, so refusals beyond those are counted with the rejections.
 
 **The UI does the least it can per frame.** `takeLiveFrames` hands every channel's newest frame to
 `LiveChannels`, but only the channel in view is converted and drawn, wrapped in a `QImage` without a copy
@@ -181,8 +183,8 @@ thread never waits on the UI for them and Qt's event queue holds at most one suc
 bounded by the handful of fixed reasons. After a line goes out, the UI leaves the counts to grow for a
 second before taking them again, so a sender rejected 30 times a second costs the log one line a second,
 not thirty. While paused, `viewer paused` rejections are only added up, and logged as one line at Resume
-or Stop; `too many live channels` is never logged as a count, because the UI names each refused channel
-once instead.
+or Stop; `too many live channels` is logged as a count only once the UI has named 8 refused channels, as it
+names each of those once instead.
 
 **Storage.** `MainWindow` tells its `StorageController` every change to the history; the controller lives
 on the UI thread and passes each one to its `StorageWorker` as a queued call: store an image, delete one,

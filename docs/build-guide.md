@@ -123,7 +123,7 @@ CMake then does not look for Qt at all; both libraries, the three examples and t
 ## Running the tests
 
 ```sh
-ctest --preset debug                       # everything (508 tests, about 70 seconds)
+ctest --preset debug                       # everything (512 tests, about 70 seconds)
 ctest --preset debug -R WireFormat         # only tests whose name matches a regular expression
 ctest --preset debug -R "Client|Server"
 ctest --preset asan                        # the same tests under the sanitizers (about 90 seconds)

@@ -39,18 +39,18 @@ visual_debug::Acceptance QtImageSink::onImageReceived(visual_debug::ImageMessage
 visual_debug::Acceptance QtImageSink::takeLiveFrame(visual_debug::ImageMessage message) {
     const Clock::time_point now = m_now();
     const std::size_t bytes = message.image.total() * message.image.elemSize();
+    while (!roomFor(message.name, bytes)) {
+        if (!evictLongestIdle(now, message.name)) {
+            auto& refused = m_liveNews.refused;
+            if (std::find(refused.begin(), refused.end(), message.name) == refused.end()) {
+                refused.push_back(message.name);
+            }
+            return visual_debug::Acceptance::TooManyLiveChannels;
+        }
+    }
     auto channel = std::find_if(m_liveChannels.begin(), m_liveChannels.end(),
                                 [&message](const LiveChannel& open) { return open.name == message.name; });
     if (channel == m_liveChannels.end()) {
-        while (!roomForNewChannel(bytes)) {
-            if (!evictLongestIdle(now)) {
-                auto& refused = m_liveNews.refused;
-                if (std::find(refused.begin(), refused.end(), message.name) == refused.end()) {
-                    refused.push_back(message.name);
-                }
-                return visual_debug::Acceptance::TooManyLiveChannels;
-            }
-        }
         m_liveChannels.push_back({.name = message.name});
         channel = std::prev(m_liveChannels.end());
     }
@@ -65,23 +65,27 @@ visual_debug::Acceptance QtImageSink::takeLiveFrame(visual_debug::ImageMessage m
     return visual_debug::Acceptance::Taken;
 }
 
-bool QtImageSink::roomForNewChannel(std::size_t bytes) const {
-    if (m_liveChannels.size() >= static_cast<std::size_t>(kMaxLiveChannels)) {
-        return false;
-    }
+// With `bytes` as the channel's newest frame, in place of the one it has if it is open.
+bool QtImageSink::roomFor(const std::string& name, std::size_t bytes) const {
+    bool isOpen = false;
     std::size_t total = bytes;
     for (const LiveChannel& open : m_liveChannels) {
-        total += open.newestBytes;
+        if (open.name == name) {
+            isOpen = true;
+        } else {
+            total += open.newestBytes;
+        }
     }
-    return total <= kMaxLiveBytes;
+    return (isOpen || m_liveChannels.size() < static_cast<std::size_t>(kMaxLiveChannels)) &&
+           total <= kMaxLiveBytes;
 }
 
 // A channel whose sender stopped keeps its place until closed, so without this a developer who restarts a
 // sender under new channel names would soon be refused.
-bool QtImageSink::evictLongestIdle(Clock::time_point now) {
+bool QtImageSink::evictLongestIdle(Clock::time_point now, const std::string& keep) {
     auto longestIdle = m_liveChannels.end();
     for (auto open = m_liveChannels.begin(); open != m_liveChannels.end(); ++open) {
-        if (now - open->lastArrival >= kLiveIdleAfter &&
+        if (open->name != keep && now - open->lastArrival >= kLiveIdleAfter &&
             (longestIdle == m_liveChannels.end() || open->lastArrival < longestIdle->lastArrival)) {
             longestIdle = open;
         }

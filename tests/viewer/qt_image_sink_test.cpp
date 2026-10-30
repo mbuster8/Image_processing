@@ -219,6 +219,43 @@ TEST(QtImageSink, RefusesBeyondTheByteBudget) {
     EXPECT_EQ(sink.onImageReceived(liveFrame("small")), Acceptance::Taken);
 }
 
+// The budget holds for every frame, not only a channel's first: an open channel cannot grow past it.
+TEST(QtImageSink, RefusesAnOpenChannelsFrameBeyondTheByteBudget) {
+    unsigned char buffer[16] = {};
+    QtImageSink sink;
+    const cv::Mat sixHundredMiB(25600, 24576, CV_8UC1, buffer);
+    ASSERT_EQ(sink.onImageReceived({.name = "big", .image = sixHundredMiB, .live = true}), Acceptance::Taken);
+    ASSERT_EQ(sink.onImageReceived(liveFrame("grows", 1)), Acceptance::Taken);
+
+    EXPECT_EQ(sink.onImageReceived({.name = "grows", .image = sixHundredMiB, .live = true}),
+              Acceptance::TooManyLiveChannels);
+    // A frame the size of the one it replaces still fits.
+    EXPECT_EQ(sink.onImageReceived({.name = "big", .image = sixHundredMiB, .live = true}), Acceptance::Taken);
+
+    const auto batch = sink.takeLiveFrames();
+    EXPECT_EQ(batch.refused, std::vector<std::string>{"grows"});
+    ASSERT_EQ(namesOf(batch.frames), (std::vector<std::string>{"big", "grows"}));
+    EXPECT_EQ(valueOf(batch.frames[1]), 1); // its earlier frame still waits
+}
+
+TEST(QtImageSink, AGrowingChannelEvictsAnIdleOne) {
+    unsigned char buffer[16] = {};
+    auto now = std::chrono::steady_clock::time_point{} + 1h;
+    QtImageSink sink([&now] { return now; });
+    const cv::Mat sixHundredMiB(25600, 24576, CV_8UC1, buffer);
+    ASSERT_EQ(sink.onImageReceived({.name = "big", .image = sixHundredMiB, .live = true}), Acceptance::Taken);
+    ASSERT_EQ(sink.onImageReceived(liveFrame("grows")), Acceptance::Taken);
+    sink.takeLiveFrames();
+    now += 6s; // both idle now: "grows" makes room by closing "big", never itself
+
+    EXPECT_EQ(sink.onImageReceived({.name = "grows", .image = sixHundredMiB, .live = true}),
+              Acceptance::Taken);
+
+    const auto batch = sink.takeLiveFrames();
+    EXPECT_EQ(batch.evicted, std::vector<std::string>{"big"});
+    EXPECT_EQ(namesOf(batch.frames), std::vector<std::string>{"grows"});
+}
+
 TEST(QtImageSink, EvictsTheLongestIdleForANewChannel) {
     auto now = std::chrono::steady_clock::time_point{} + 1h;
     QtImageSink sink([&now] { return now; });

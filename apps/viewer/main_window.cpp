@@ -69,6 +69,9 @@ constexpr std::chrono::seconds kRejectionLinesEvery{1}; // at most one line per 
 // The server's replies, which the sink counts as rejections like any other.
 constexpr std::string_view kPausedReason = "viewer paused";
 constexpr std::string_view kTooManyChannelsReason = "too many live channels";
+// Refused live channels named in the log, once each; refusals of any more are only counted, so a sender that
+// puts a frame number in the channel name costs the log one line a second, not one a frame.
+constexpr std::size_t kNamedRefusedChannels = 8;
 const QString kSidebarWidthKey = QStringLiteral("viewer/sidebarWidth");
 const QString kLogOpenKey = QStringLiteral("viewer/logOpen");
 const QString kLogHeightKey = QStringLiteral("viewer/logHeight");
@@ -439,8 +442,8 @@ void MainWindow::writeRejections() {
             m_pausedRejections += count; // said once, at Resume or Stop
             continue;
         }
-        if (reason == kTooManyChannelsReason) {
-            continue; // each refused channel is logged once by name
+        if (reason == kTooManyChannelsReason && !std::exchange(m_unnamedRefusals, false)) {
+            continue; // each refused channel was logged once by name
         }
         const QString text = QString::fromStdString(reason);
         log(LogKind::Warning, count == 1 ? tr("Rejected a request: [%1]").arg(text)
@@ -766,13 +769,19 @@ void MainWindow::takeLiveFrames() {
     }
 
     for (const std::string& name : batch.refused) {
-        if (!m_refusedChannels.insert(name).second) {
+        if (m_refusedChannels.contains(name)) {
             continue;
         }
+        if (m_refusedChannels.size() >= kNamedRefusedChannels) {
+            m_unnamedRefusals = true; // counted with the rejections instead
+            continue;
+        }
+        m_refusedChannels.insert(name);
         const QString shown = singleLine(QString::fromStdString(name));
         const auto open = static_cast<int>(m_live.channels().size());
+        // An open channel is refused only for a frame that would take the frames past the byte budget.
         log(LogKind::Warning,
-            open >= QtImageSink::kMaxLiveChannels
+            m_live.find(name) == nullptr && open >= QtImageSink::kMaxLiveChannels
                 ? tr("Refused live channel [%1]: %2 channels are open").arg(shown).arg(open)
                 : tr("Refused live channel [%1]: the open channels' frames would take more than %2")
                       .arg(shown, QLocale().formattedDataSize(static_cast<qint64>(QtImageSink::kMaxLiveBytes),
@@ -852,7 +861,10 @@ void MainWindow::updateLiveRow(const viewer_core::LiveChannel& channel, Clock::t
         if (newest.rows > height) {
             const int width =
                 std::max(1, static_cast<int>(std::lround(double(newest.cols) * height / newest.rows)));
-            cv::resize(newest, small, cv::Size(width, height), 0, 0, cv::INTER_AREA);
+            // OpenCV averages (INTER_AREA) every depth but 8S and 32S; those are sampled instead.
+            const bool averages = newest.depth() != CV_8S && newest.depth() != CV_32S;
+            cv::resize(newest, small, cv::Size(width, height), 0, 0,
+                       averages ? cv::INTER_AREA : cv::INTER_NEAREST);
         }
         picture =
             qt_common::toQImage(viewer_core::toDisplayImage(small, m_displaySettings.get(channel.name)));
