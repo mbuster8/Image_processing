@@ -22,7 +22,8 @@ visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
 brought it back: ported to Qt 6 and OpenCV 5, restructured, tested and documented. What changed, and why,
-is [below](#what-changed-since-2013). Until October 2026 the repository was called `Image_processing`.
+is [below](#what-changed-since-2013). Until October 2026 the repository was called `Image_processing`
+([former names](docs/former-names.md)).
 
 ## Coming next
 
