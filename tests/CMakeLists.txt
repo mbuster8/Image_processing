@@ -48,6 +48,17 @@ if(ID_VISION_LAB_BUILD_EXAMPLES)
             pipeline
             visual_debug::visual_debug
             GTest::gtest_main)
+    id_vision_lab_add_test_executable(live_sender_tests
+        SOURCES
+            examples/live_sender_test.cpp
+        LIBRARIES
+            live_sender_lib
+            visual_debug::visual_debug
+            cppzmq
+            nlohmann_json::nlohmann_json
+            GTest::gtest_main)
+    # test_support.h: the collecting sink the delivery test uses.
+    target_include_directories(live_sender_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/visual_debug)
 endif()
 
 # The Qt code, with an offscreen QApplication. Every Qt test program uses qt_common/test_main.cpp, which keeps
