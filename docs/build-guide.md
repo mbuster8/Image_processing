@@ -66,6 +66,7 @@ the release build:
 ```sh
 open build/debug/apps/viewer/visual_debug_viewer.app                   # the Visual Debug Viewer
 build/debug/examples/pipeline_demo/pipeline_demo                       # sends it ten images
+build/debug/examples/live_sender/live_sender --pattern                  # streams two live channels
 open build/debug/apps/example_sender/visual_debug_example_sender.app   # the Visual Debug Example Sender
 ```
 
@@ -76,8 +77,8 @@ or library cannot break the build, but a new warning from project code should be
 
 | Target | What it is | Where it lands (in `build/<preset>/`) |
 |---|---|---|
-| `visual_debug` | The sender library: wire format, `Client`, `Server`, `sendImage` | `libs/visual_debug/libvisual_debug.a` |
-| `viewer_core` | The viewer's UI-free logic: display conversion, history, pixel readout, zoom | `libs/viewer_core/libviewer_core.a` |
+| `visual_debug` | The sender library: wire format, `Client`, `Server`, `sendImage`, `sendLive` | `libs/visual_debug/libvisual_debug.a` |
+| `viewer_core` | The viewer's UI-free logic: display conversion and settings, history, live channels, pixel readout, zoom | `libs/viewer_core/libviewer_core.a` |
 | `qt_common` | Qt helpers shared by both apps | `apps/qt_common/libqt_common.a` |
 | `viewer_ui` | The viewer's windows, as a library its tests link | `apps/viewer/libviewer_ui.a` |
 | `visual_debug_viewer` | **The Visual Debug Viewer** | `apps/viewer/visual_debug_viewer.app` |
@@ -86,7 +87,9 @@ or library cannot break the build, but a new warning from project code should be
 | `pipeline` | The demo's OpenCV stages | `examples/pipeline_demo/libpipeline.a` |
 | `pipeline_demo` | Command-line demo: an OpenCV pipeline that sends every stage | `examples/pipeline_demo/pipeline_demo` |
 | `minimal_sender` | The smallest use of `sendImage` | `examples/minimal_sender/minimal_sender` |
-| `visual_debug_tests`, `viewer_core_tests`, `qt_common_tests`, `viewer_ui_tests`, `example_sender_ui_tests`, `pipeline_tests` | GoogleTest executables | `tests/` |
+| `live_sender_lib` | `live_sender`'s argument parsing, test pattern, edge channel and sending, without the reading of cameras and files | `examples/live_sender/liblive_sender_lib.a` |
+| `live_sender` | Command-line example: streams a camera, a video file or a test pattern as live channels. The only target that needs OpenCV's `videoio` module | `examples/live_sender/live_sender` |
+| `visual_debug_tests`, `viewer_core_tests`, `qt_common_tests`, `viewer_ui_tests`, `example_sender_ui_tests`, `pipeline_tests`, `live_sender_tests` | GoogleTest executables | `tests/` |
 
 To build one target: `cmake --build --preset debug --target pipeline_demo`.
 
@@ -100,7 +103,7 @@ macOS.
 | Option | Default | Effect |
 |---|---|---|
 | `ID_VISION_LAB_BUILD_QT_APPS` | `ON` | The viewer, the example sender, `qt_common` and the Qt tests |
-| `ID_VISION_LAB_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender` and their tests |
+| `ID_VISION_LAB_BUILD_EXAMPLES` | `ON` | `pipeline_demo`, `minimal_sender`, `live_sender` and their tests |
 | `ID_VISION_LAB_BUILD_TESTS` | `ON` | All GoogleTest executables |
 | `ID_VISION_LAB_SANITIZERS` | `OFF` | AddressSanitizer and UndefinedBehaviorSanitizer (the `asan` preset turns it on) |
 
@@ -112,18 +115,18 @@ and build into a separate folder:
 ```sh
 cmake --preset debug -B build/no-qt -DID_VISION_LAB_BUILD_QT_APPS=OFF
 cmake --build build/no-qt
-ctest --test-dir build/no-qt               # the 170 tests that need no Qt
+ctest --test-dir build/no-qt               # the 218 tests that need no Qt
 ```
 
-CMake then does not look for Qt at all; both libraries, both examples and their tests still build.
+CMake then does not look for Qt at all; both libraries, the three examples and their tests still build.
 
 ## Running the tests
 
 ```sh
-ctest --preset debug                       # everything (397 tests, about 50 seconds)
+ctest --preset debug                       # everything (508 tests, about 70 seconds)
 ctest --preset debug -R WireFormat         # only tests whose name matches a regular expression
 ctest --preset debug -R "Client|Server"
-ctest --preset asan                        # the same tests under the sanitizers (about a minute)
+ctest --preset asan                        # the same tests under the sanitizers (about 90 seconds)
 ctest --preset debug -L whole              # only the whole-program runs
 ctest --preset debug -LE whole             # everything except them
 ```

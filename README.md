@@ -18,6 +18,13 @@ window where you can zoom into it, pan around and read the original value of any
 visual_debug::sendImage(edges, "Canny edges");   // returns quickly if no viewer is running
 ```
 
+A camera or video stream goes to a **live channel** instead, which updates in place rather than filling the
+history:
+
+```cpp
+visual_debug::sendLive(frame, "camera");          // never waits for the viewer to draw
+```
+
 ![The Visual Debug Viewer showing a photo the example sender sent, the pipeline_demo stages below it in the sidebar, the activity log open, and the pixel under the cursor read out in the status bar](docs/images/viewer.png)
 
 This started as my bachelor's thesis in 2013, written for Qt 4 and OpenCV 2.4 on Ubuntu. In 2026 I
@@ -27,8 +34,6 @@ is [below](#what-changed-since-2013). Until October 2026 the repository was call
 
 ## Coming next
 
-- **Live channels** in the viewer, so a camera or video stream updates in place instead of filling the
-  history.
 - **The Document Lab**, a desktop app for developing document reading: it finds an identity document in a
   camera image, checks capture quality, reads the machine-readable zone (MRZ), and reads the passport's chip
   (ICAO 9303: BAC, PACE, Passive and Active Authentication) through a PC/SC reader.
@@ -37,11 +42,11 @@ is [below](#what-changed-since-2013). Until October 2026 the repository was call
 
 ```mermaid
 flowchart LR
-    host["Your OpenCV program"] -- "sendImage()" --> vd["visual_debug library"]
+    host["Your OpenCV program"] -- "sendImage() / sendLive()" --> vd["visual_debug library"]
     vd -- "ZeroMQ: JSON header + pixel bytes" --> server
     subgraph viewer["Viewer process (Qt 6)"]
-        server["Server thread"] --> core["viewer_core: display, history, readout, zoom"]
-        core --> ui["Window: thumbnails, zoomable view, status bar"]
+        server["Server thread"] --> core["viewer_core: display, history, live channels, readout, zoom"]
+        core --> ui["Window: thumbnails, live channels, zoomable view, status bar"]
     end
 ```
 
@@ -81,7 +86,7 @@ Run these from the repository root. The [build guide](docs/build-guide.md) and t
 ```sh
 cmake --preset debug                    # configure; once, or after changing a CMakeLists.txt
 cmake --build --preset debug            # build everything into build/debug
-ctest --preset debug                    # all 397 tests, about 50 seconds
+ctest --preset debug                    # all 508 tests, about 70 seconds
 ctest --preset debug -R ClientServer    # only the tests whose name matches
 
 cmake --preset release                  # an optimised build, into build/release
@@ -90,7 +95,7 @@ ctest --preset release
 
 cmake --preset asan                     # Debug with AddressSanitizer and UndefinedBehaviorSanitizer
 cmake --build --preset asan             # into build/asan
-ctest --preset asan                     # the same tests under the sanitizers, about a minute
+ctest --preset asan                     # the same tests under the sanitizers, about 90 seconds
 ```
 
 ### Check before a push
@@ -123,6 +128,12 @@ open build/debug/apps/example_sender/visual_debug_example_sender.app
 
 # The smallest sender: three thresholded images
 build/debug/examples/minimal_sender/minimal_sender
+
+# Live channels: a moving test pattern and its edges, at 30 frames a second until Ctrl+C
+build/debug/examples/live_sender/live_sender --pattern
+# ... or a video file, or a camera (macOS may first ask to let the terminal use it)
+build/debug/examples/live_sender/live_sender path/to/video.mov
+build/debug/examples/live_sender/live_sender --camera 0
 ```
 
 Senders started before the viewer's status bar says `Listening on [tcp://127.0.0.1:7139]` get
@@ -133,7 +144,10 @@ Senders started before the viewer's status bar says `Listening on [tcp://127.0.0
 In the viewer, the mouse wheel zooms, dragging pans, a double-click fits the image to the window again,
 and hovering shows the original value of the pixel under the cursor. **File → Open…** adds an image file
 to the history and **File → Save As…** saves the displayed image. The sidebar renames, duplicates and
-deletes images (with undo), searches and sorts them; the status bar pauses or stops the viewer's server;
+deletes images (with undo), searches and sorts them; its **Live** group lists the live channels, each
+with its frame rate, and **Image → Freeze** and **Snapshot** hold a channel's frame or keep it in the
+history; **Range** and **Colours** above the view set how values map to the screen, with false colour for
+single-channel images; the status bar pauses or stops the viewer's server;
 the activity log records what arrived and what was refused; the history can be kept between sessions;
 **View → Appearance** picks light or dark; and **About** names the OpenCV and Qt versions it runs with. The
 [user guide](docs/user-guide.md) covers each of these.
@@ -184,7 +198,7 @@ build/debug/apps/viewer/visual_debug_viewer.app/Contents/MacOS/visual_debug_view
 | C++ | pre-C++11 style: `0` for null, manual `new` and `delete` | C++20 |
 | Build | three qmake `.pro` files with hard-coded build paths | one CMake project with presets, warning-free under `-Wall -Wextra -Wpedantic` |
 | Message | a hand-packed binary header | a JSON header plus a pixel frame, validated field by field |
-| Tests | none | 391 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
+| Tests | none | 501 GoogleTest tests, plus each test program run whole; also run under AddressSanitizer and UndefinedBehaviorSanitizer |
 | Documentation | one paragraph in `readme.txt` | this README, four guides and a decision record |
 
 ### Defects found in the 2013 code, and what fixed them
@@ -225,14 +239,15 @@ file: `photo.png #1`.
 id-vision-lab/
 ├── libs/
 │   ├── visual_debug/      the sender library and the viewer's server (no Qt)
-│   └── viewer_core/       the viewer's logic: display, history, pixel readout, zoom (no Qt)
+│   └── viewer_core/       the viewer's logic: display, history, live channels, pixel readout, zoom (no Qt)
 ├── apps/
 │   ├── viewer/            the Visual Debug Viewer (Qt 6)
 │   ├── example_sender/    the Visual Debug Example Sender (Qt 6)
 │   └── qt_common/         Qt helpers shared by both apps
 ├── examples/
 │   ├── pipeline_demo/     an OpenCV pipeline that sends every stage
-│   └── minimal_sender/    the smallest use of sendImage()
+│   ├── minimal_sender/    the smallest use of sendImage()
+│   └── live_sender/       streams a camera, a video file or a test pattern as live channels
 ├── tests/                 GoogleTest tests for all of the above
 ├── resources/icons/       the apps' icons
 ├── docs/                  guides, wire format, architecture, decision records

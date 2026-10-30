@@ -49,7 +49,7 @@ and data folders: renaming an app moves them.
 ## Layout
 
 `libs/visual_debug` (transport, no Qt) · `libs/viewer_core` (viewer logic, no Qt) · `apps/viewer` ·
-`apps/example_sender` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender}` ·
+`apps/example_sender` · `apps/qt_common` · `examples/{pipeline_demo,minimal_sender,live_sender}` ·
 `tests/{visual_debug,viewer_core,qt_common,viewer,example_sender,examples}` (`tests/qt_common` also holds
 the shared Qt test `main()` and helpers) · `cmake/` (warnings, sanitizers, macOS bundle icons) · `scripts/`
 (`check.sh`, the Ubuntu package list, the pre-push hook) · `docker/` (the CI's Ubuntu job as a container) ·
@@ -62,7 +62,10 @@ identifiers): [`docs/former-names.md`](docs/former-names.md).
   `apps/CMakeLists.txt` only. The no-Qt configure above must keep building.
 - **Threading:** `ImageSink::onImageReceived` runs on the server's worker thread. `QtImageSink` hands images
   to the UI thread by queued signal; the UI must call `markHandled()` for every image it takes, or the sink
-  fills its eight slots and the viewer reports busy. `viewer_core` is UI-thread only and has no locks.
+  fills its eight slots and the viewer reports busy. Live frames (`sendLive`) never wait and skip those
+  slots: the sink keeps each channel's newest frame and the UI takes them all with `takeLiveFrames()`;
+  live frames and snapshots never reach `StorageController`. `viewer_core` is UI-thread only and has no
+  locks.
 - **Wire-format changes:** a new optional header field keeps `version` 2; changing or removing a field
   bumps it. Update `docs/wire-format.md` and `docs/user-guide.md` in the same change.
 - **Security:** no exception ever leaves `visual_debug` (every send returns a `SendResult`); reply reasons

@@ -22,6 +22,7 @@ flowchart LR
     subgraph examples["Examples (no Qt)"]
         pipeline["pipeline_demo"]
         minimal["minimal_sender"]
+        live["live_sender"]
     end
     subgraph libs["Libraries (no Qt)"]
         vd["visual_debug<br/>wire format, Client, Server"]
@@ -37,19 +38,21 @@ flowchart LR
     qtcommon --> vc
     pipeline --> vd
     minimal --> vd
+    live --> vd
     vd --> deps1["OpenCV core, ZeroMQ, nlohmann/json"]
     vc --> deps2["OpenCV core, imgproc"]
 ```
 
 | Component | Responsibility |
 |---|---|
-| `libs/visual_debug` | Everything both ends of the channel share. `wire_format`: encodes an image into the two frames and decodes them back, validating everything and never throwing. `ImageSender`: the interface a host application depends on. `Client`: its ZeroMQ implementation. `sendImage()`: the one-line convenience call, using one process-wide `Client`. `Server`: the viewer's receive loop on its own thread. `ImageSink`: the interface through which the server hands images to whoever displays them. `endpoint`: the default endpoint and the loopback check. |
-| `libs/viewer_core` | The viewer's logic, free of any UI toolkit, so it is unit-tested without Qt. `toDisplayImage`: any supported image to 8-bit RGBA. `ImageHistory`: the bounded list of received images. `inspectPixel`: the readout text for one pixel of the original. `Viewport`: zoom and pan arithmetic. |
+| `libs/visual_debug` | Everything both ends of the channel share. `wire_format`: encodes an image into the two frames and decodes them back, validating everything and never throwing. `ImageSender`: the interface a host application depends on. `Client`: its ZeroMQ implementation. `sendImage()` and `sendLive()`: the one-line convenience calls, using one process-wide `Client`. `Server`: the viewer's receive loop on its own thread. `ImageSink`: the interface through which the server hands images to whoever displays them. `endpoint`: the default endpoint and the loopback check. |
+| `libs/viewer_core` | The viewer's logic, free of any UI toolkit, so it is unit-tested without Qt. `toDisplayImage`: any supported image to 8-bit RGBA, with a display range and colour map. `DisplaySettings` and `DisplaySettingsStore`: those choices, by name, for the session. `ImageHistory`: the bounded list of received images. `LiveChannels`: per live channel, the frame to show, its counters and rates, and whether it is idle or frozen. `inspectPixel`: the readout text for one pixel of the original. `Viewport`: zoom and pan arithmetic. |
 | `apps/qt_common` | The Qt code both apps need: `toQImage` (an RGBA `cv::Mat` to a `QImage`), choosing and reading an image file, `application_identity` (the apps' names and descriptions; `setApplicationIdentity`, which names what `QSettings` and the standard paths use), `about` (Help → About, which names the OpenCV and Qt versions the app runs with), `appearance` (the shared System, Light or Dark setting and its menu), `outline_icons` (the line icons, drawn in the palette's colours), `controls` (the shared control height, framed buttons and the regular font) and `shades` (the panel, hover, selection and divider greys, blended from the palette's window and text colours; `usePanelGrey`, which keeps a widget on the panel grey as the appearance changes; and `DividerLine`). |
-| `apps/viewer` | The Visual Debug Viewer. `MainWindow` composes the parts; `ImageView` paints through a `Viewport`; `ImageSidebar` holds the search field, the sort options and `ThumbnailPanel`, which shows the history: a list view over `ThumbnailModel` (the history's rows, in history order), seen through `ThumbnailFilterModel` (the names the search matches, in the chosen sort) and drawn by `ThumbnailDelegate`; `QtImageSink` moves images from the server thread to the UI thread; `ActivityLog` is the activity log (a list model, stored in the endpoint's `DataFolder`) and `ActivityLogPanel` shows it; `DividerSplitter` is a splitter whose handles draw a divider line and a grip; `ImageStore` keeps images in files, `StorageWorker` drives it on its own thread, and `StorageController` owns that thread and the restore for the window. |
+| `apps/viewer` | The Visual Debug Viewer. `MainWindow` composes the parts; `ImageView` paints through a `Viewport`; `ImageSidebar` holds the search field, the sort options and `ThumbnailPanel`, which shows the history: a list view over `ThumbnailModel` (the history's rows, in history order), seen through `ThumbnailFilterModel` (the names the search matches, in the chosen sort) and drawn by `ThumbnailDelegate`, and `LiveChannelPanel`, the Live group's rows; `ImageInfoBar` is the strip above the view, with `DisplaySettingsControl` (the Range and Colours buttons) and Freeze and Snapshot; `QtImageSink` moves images and live frames from the server thread to the UI thread; `ActivityLog` is the activity log (a list model, stored in the endpoint's `DataFolder`) and `ActivityLogPanel` shows it; `DividerSplitter` is a splitter whose handles draw a divider line and a grip; `ImageStore` keeps images in files, `StorageWorker` drives it on its own thread, and `StorageController` owns that thread and the restore for the window. |
 | `apps/example_sender` | The Visual Debug Example Sender, which shows how a Qt app uses the library. Its window takes a factory that makes an `ImageSender` for an endpoint, so it never knows which transport is behind it, and a new endpoint in its **Send to** field gets a new sender. |
 | `examples/pipeline_demo` | An ordinary OpenCV program that sends each stage of a pipeline. Its stages are a separate `pipeline` library so tests can check them. |
 | `examples/minimal_sender` | The smallest use of `sendImage`, compiled so the user guide's first example cannot go stale. |
+| `examples/live_sender` | Streams a camera, a video file or a test pattern to live channels with `sendLive`, with an edge channel beside it. Everything but the reading of cameras and files is a separate `live_sender_lib`, so tests check it without a camera; only the executable links OpenCV's `videoio`. |
 
 ## The dependency rule
 
@@ -63,7 +66,7 @@ Dependencies point one way: applications and examples depend on the libraries, n
 CMake enforces this: each library's `CMakeLists.txt` links only OpenCV, ZeroMQ and nlohmann/json;
 `qt_standard_project_setup()` and automatic `moc`, `uic` and `rcc` are switched on in `apps/CMakeLists.txt`
 only; and configuring with `-DID_VISION_LAB_BUILD_QT_APPS=OFF` never looks for Qt, yet builds both
-libraries, both examples and their tests. Library code that uses Qt fails to link in that build. A bare
+libraries, the three examples and their tests. Library code that uses Qt fails to link in that build. A bare
 Qt `#include` may still compile, because Homebrew puts Qt's headers in the same shared include folder as
 ZeroMQ's, so code review has to catch those.
 
@@ -94,6 +97,51 @@ sequenceDiagram
 
 The reply goes back as soon as the sink accepts the image, before the UI has drawn it, so a sender never
 waits for painting.
+
+## One live frame, end to end
+
+A frame sent with `sendLive(frame, "camera")` carries `live: true` and the sender's clock as `sentAt`
+([wire format](wire-format.md#header-fields)). It never enters the history: it updates its channel in place.
+
+```mermaid
+sequenceDiagram
+    participant Host as Host application
+    participant Server as Server (worker thread)
+    participant Sink as QtImageSink
+    participant UI as MainWindow (UI thread)
+
+    Host->>Server: sendLive(frame, "camera")
+    Server->>Sink: onImageReceived(message)
+    Sink->>Sink: keep it as the channel's waiting frame,<br/>replacing (and counting) an older one
+    Sink-->>UI: liveFramesWaiting (queued, once until the next take)
+    Sink->>Server: Acceptance::Taken
+    Server->>Host: {"status":"ok"}
+    UI->>Sink: takeLiveFrames()
+    Sink->>UI: newest frame per channel, refused and evicted names
+    UI->>UI: LiveChannels::receive
+    UI->>UI: converts and draws the shown channel's frame only
+    Note over UI: every 500 ms: idle states, row pictures and rates, info strip
+```
+
+**The sink never makes a live sender wait.** Live frames do not use the eight slots or the 200 ms wait:
+each channel keeps only its newest waiting frame, so a sender faster than the screen loses frames in the
+viewer (counted as dropped), never time, and the sink holds at most one waiting frame per channel. It opens
+at most 8 channels and refuses a new one whose frame would take the open channels' frames past 1 GiB; a
+channel without a frame for 5 s is idle, and the longest-idle one is closed to make room. A refused frame
+is answered `too many live channels`, and the UI logs each refused name once.
+
+**The UI does the least it can per frame.** `takeLiveFrames` hands every channel's newest frame to
+`LiveChannels`, but only the channel in view is converted and drawn, wrapped in a `QImage` without a copy
+(`qt_common::wrapAsQImage`), and the view keeps its zoom and pan while the frame size stays the same. A
+500 ms timer, running only while channels exist, does the rest: it marks channels idle, redraws each
+row's picture (shrunk before it is converted, and only for a newer frame) and its rate, and refreshes the
+info strip. `LiveChannels` takes every time as an argument; `MainWindow` and the sink share one injectable
+`steady_clock`, so tests move time by hand.
+
+**Freeze and Snapshot.** A frozen channel keeps its shown frame and sets newer ones aside, still counting
+them; unfreezing shows the newest. Snapshot adds the shown frame to the history as an ordinary image with
+`ImageSource::LiveSnapshot` and the channel's display settings. Live channels and snapshots stay in memory:
+`StorageController` skips both, so **Keep images between sessions** never writes a live frame to disk.
 
 ## Threads
 
@@ -128,9 +176,13 @@ see `Rejected` ("viewer busy"). The 200 ms stays well inside the client's 500 ms
 **Rejections reach the log as counts.** `QtImageSink::onRequestRejected` only adds one to the count for its
 reason, under the sink's mutex, and emits `requestsRejected` when the first count appears. The UI, on the
 queued signal, takes every count at once with `takeRejections()` and logs one entry per reason, such as
-`Rejected 3 requests: [viewer paused]`. However many requests a sender floods the viewer with, the worker
+`Rejected 3 requests: [viewer busy]`. However many requests a sender floods the viewer with, the worker
 thread never waits on the UI for them and Qt's event queue holds at most one such signal; the counts are
-bounded by the handful of fixed reasons.
+bounded by the handful of fixed reasons. After a line goes out, the UI leaves the counts to grow for a
+second before taking them again, so a sender rejected 30 times a second costs the log one line a second,
+not thirty. While paused, `viewer paused` rejections are only added up, and logged as one line at Resume
+or Stop; `too many live channels` is never logged as a count, because the UI names each refused channel
+once instead.
 
 **Storage.** `MainWindow` tells its `StorageController` every change to the history; the controller lives
 on the UI thread and passes each one to its `StorageWorker` as a queued call: store an image, delete one,
@@ -153,6 +205,7 @@ it never accepts images before its UI can take them. `MainWindow` declares its `
 ## Display rules
 
 `viewer_core::toDisplayImage` produces what is on screen; the pixel readout always reads the original.
+With the default display settings (range Auto, colours Grey):
 
 | Input | Display |
 |---|---|
@@ -162,6 +215,21 @@ it never accepts images before its UI can take them. `MainWindow` declares its `
 | 2 channels | R = channel 0, G = channel 1, B = 0 |
 | 3 channels | BGR to RGB |
 | 4 channels | BGRA to RGBA |
+
+Each image name and live channel can have its own `DisplaySettings`, kept for the session only in a
+`DisplaySettingsStore`:
+
+- **Range.** Auto stretches each image or frame from its own minimum to its maximum, as above. Hold keeps
+  the range of the frame shown when it was chosen (`autoRange`), so a live channel's brightness stops
+  jumping from frame to frame. Fixed uses a typed range. Hold and Fixed map the range to 0–255 for every
+  depth, 8U included, clipping values outside it; a range whose minimum is not below its maximum shows
+  black.
+- **Colours.** Grey, Turbo or Viridis, for single-channel images only. NaN and ±Inf are black whatever the
+  map.
+
+The history keeps each image's display picture as it was converted on arrival; an image whose settings
+are not the default is converted again from the original whenever it is shown, copied or saved, so Copy
+Image and Save As give what is on screen.
 
 `ImageView` samples with nearest neighbour when zoomed in past 1:1, so single pixels stay sharp, and
 smoothly when zoomed out. It floors view-to-image coordinates, so the point at −0.5 is pixel −1 (outside
