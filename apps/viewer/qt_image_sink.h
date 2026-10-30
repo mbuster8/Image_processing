@@ -89,9 +89,9 @@ signals:
 private:
     struct LiveChannel {
         std::string name;
-        Clock::time_point lastArrival;
+        Clock::time_point lastArrival{};
         std::size_t newestBytes = 0;
-        std::optional<LiveFrame> waiting;
+        std::optional<LiveFrame> waiting{};
     };
 
     visual_debug::Acceptance takeLiveFrame(visual_debug::ImageMessage message); // with m_mutex held

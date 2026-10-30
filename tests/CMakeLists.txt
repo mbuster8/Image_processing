@@ -31,6 +31,7 @@ id_vision_lab_add_test_executable(viewer_core_tests
         viewer_core/display_converter_test.cpp
         viewer_core/display_settings_test.cpp
         viewer_core/image_history_test.cpp
+        viewer_core/live_channels_test.cpp
         viewer_core/pixel_inspector_test.cpp
         viewer_core/save_name_test.cpp
         viewer_core/viewport_test.cpp

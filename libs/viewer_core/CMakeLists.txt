@@ -3,6 +3,7 @@ add_library(viewer_core STATIC
     src/display_settings.cpp
     src/image_formats.cpp
     src/image_history.cpp
+    src/live_channels.cpp
     src/pixel_inspector.cpp
     src/save_name.cpp
     src/viewport.cpp)

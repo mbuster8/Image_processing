@@ -20,7 +20,7 @@ struct DisplayRange {
 
 struct DisplaySettings {
     RangeMode mode = RangeMode::Auto;
-    DisplayRange range; // used by Hold and Fixed
+    DisplayRange range{}; // used by Hold and Fixed
     ColourMap colours = ColourMap::Grey;
     bool operator==(const DisplaySettings&) const = default;
 };
