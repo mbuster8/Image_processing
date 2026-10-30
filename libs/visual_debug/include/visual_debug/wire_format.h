@@ -5,6 +5,8 @@
 #include <opencv2/core/mat.hpp>
 
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -20,6 +22,14 @@ inline constexpr std::size_t kMaxHeaderBytes = 64 * 1024;
 inline constexpr std::size_t kMaxPixelBytes = std::size_t{512} * 1024 * 1024;
 inline constexpr int kMaxDimension = 32768;
 inline constexpr int kMaxChannels = 4;
+// The end of the year 9999 in milliseconds since the Unix epoch: the largest sentAt a header may carry.
+inline constexpr std::int64_t kMaxSentAtMilliseconds = 253402300799999;
+
+// The optional header fields of a live frame. A sentAt outside 0 to kMaxSentAtMilliseconds is left out.
+struct EncodeOptions {
+    bool live = false;
+    std::optional<SentTime> sentAt{};
+};
 
 struct EncodedMessage {
     std::string header;
@@ -46,7 +56,8 @@ bool isSupportedImage(const cv::Mat& image);
 std::string sanitiseName(std::string_view name);
 
 // The name goes through sanitiseName.
-std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::string_view name);
+std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::string_view name,
+                                                 const EncodeOptions& options = {});
 
 // Validates every header field and the pixel frame length before allocating. The returned image owns
 // its pixels. Never throws.

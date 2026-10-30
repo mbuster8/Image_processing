@@ -49,6 +49,12 @@ existing viewers. Jupyter kernels use the same split (JSON frames plus binary bu
 | `rows`, `cols` | integers from 1 to 32768 |
 | `depth` | one of `"8U"`, `"8S"`, `"16U"`, `"16S"`, `"32S"`, `"32F"`, `"64F"` |
 | `channels` | an integer from 1 to 4 |
+| `live` | optional: a JSON boolean. `true` marks a frame of a live channel (a camera or video stream) named by `name`; the viewer shows it in place of the channel's previous frame instead of adding it to the history |
+| `sentAt` | optional: an integer from 0 to 253402300799999 (the end of the year 9999), the sender's clock in whole milliseconds since the Unix epoch when it sent the message |
+
+A version 2 viewer that predates `live` ignores both optional fields and shows a live frame as an ordinary
+image; a sender that predates them sends neither. The C++ sender writes them for `sendLive` only, and leaves
+`sentAt` out if its clock reads before 1970 or after 9999 rather than send a value the viewer would refuse.
 
 Element sizes: 1 byte for `8U` and `8S`, 2 for `16U` and `16S`, 4 for `32S` and `32F`, 8 for `64F`. The
 pixel frame may hold at most 512 MiB; the C++ sender refuses larger images before touching the network.
@@ -79,13 +85,21 @@ The header `visual_debug::encode` produces for a 640×480 single-channel 16-bit 
 6e 65 6c 73 22 3a 31 7d                           nels":1}
 ```
 
+A live frame of a 640×480 colour channel named `camera`, as `visual_debug::sendLive` sends it at
+13:23:22.517 UTC on 30 October 2026:
+
+```text
+{"protocol":"visual_debug","version":2,"type":"image","name":"camera","rows":480,"cols":640,"depth":"8U","channels":3,"live":true,"sentAt":1793366602517}
+```
+
 ## Validation
 
 The viewer rejects a message when:
 
 - it does not have exactly two frames;
 - the header is over 64 KiB, is not valid UTF-8 JSON, or is not a JSON object;
-- a required field is missing, has the wrong JSON type, or is out of range;
+- a required field is missing, has the wrong JSON type, or is out of range, or an optional field is present
+  with the wrong JSON type or out of range;
 - the pixel frame is not exactly `rows × cols × channels × element size` bytes. The size is computed in
   64-bit arithmetic from fields already range-checked, so it is at most 2³⁵ and cannot overflow, and it is
   checked before anything is allocated.
@@ -132,6 +146,8 @@ hostile header cannot make the reply itself fail to encode.
 | `cols out of range` | Missing, not an integer, or outside 1–32768. |
 | `unsupported depth` | Missing, not a string, or not one of the seven depths. |
 | `channels out of range` | Missing, not an integer, or outside 1–4. |
+| `live is not a boolean` | `live` is present but not `true` or `false`. |
+| `sentAt out of range` | `sentAt` is present but not an integer, or outside 0–253402300799999. |
 | `image too large` | The pixel data would exceed 512 MiB. |
 | `pixel frame has the wrong size` | The pixel frame's length does not match the header. |
 | `could not decode message` | Any other failure while decoding. |
@@ -152,9 +168,10 @@ cannot push a large message into the host application.
 
 ## Room to grow
 
-Optional fields the format is ready for, left as learning exercises: `timestamp`; `source` (file and line
-of the `sendImage` call); `stream` (to group the images of one pipeline); `overlays` (rectangles, points or
-contours drawn over the image).
+Optional fields the format is ready for, left as learning exercises: `source` (file and line of the
+`sendImage` call); `stream` (to group the images of one pipeline; a live channel already groups a stream's
+frames); `overlays` (rectangles, points or contours drawn over the image). `sentAt` took the place of the
+`timestamp` this list once proposed.
 
 ## Security
 

@@ -135,8 +135,9 @@ bool hasString(const Json& header, const char* key, std::string_view expected) {
 }
 
 // JSON integers only: booleans and floating-point numbers are rejected. The value is range-checked as a
-// 64-bit integer before narrowing, so 4294967297 cannot wrap to 1.
-std::optional<int> readInteger(const Json& header, const char* key, int min, int max) {
+// 64-bit integer, before any narrowing.
+std::optional<std::int64_t> readInteger64(const Json& header, const char* key, std::int64_t min,
+                                          std::int64_t max) {
     const auto it = header.find(key);
     if (it == header.end() || !it->is_number_integer()) {
         return std::nullopt;
@@ -146,13 +147,19 @@ std::optional<int> readInteger(const Json& header, const char* key, int min, int
         if (value > static_cast<std::uint64_t>(max) || static_cast<std::int64_t>(value) < min) {
             return std::nullopt;
         }
-        return static_cast<int>(value);
+        return static_cast<std::int64_t>(value);
     }
     const auto value = it->get<std::int64_t>();
     if (value < min || value > max) {
         return std::nullopt;
     }
-    return static_cast<int>(value);
+    return value;
+}
+
+// Checked before narrowing, so 4294967297 cannot wrap to 1.
+std::optional<int> readInteger(const Json& header, const char* key, int min, int max) {
+    const auto value = readInteger64(header, key, min, max);
+    return value ? std::optional<int>(static_cast<int>(*value)) : std::nullopt;
 }
 
 std::variant<ImageMessage, DecodeError> decodeChecked(std::string_view headerText,
@@ -207,6 +214,23 @@ std::variant<ImageMessage, DecodeError> decodeChecked(std::string_view headerTex
         return DecodeError{"channels out of range"};
     }
 
+    // Both optional, on any image; an older sender sends neither.
+    bool live = false;
+    if (const auto field = header.find("live"); field != header.end()) {
+        if (!field->is_boolean()) {
+            return DecodeError{"live is not a boolean"};
+        }
+        live = field->get<bool>();
+    }
+    std::optional<SentTime> sentAt;
+    if (header.contains("sentAt")) {
+        const auto milliseconds = readInteger64(header, "sentAt", 0, kMaxSentAtMilliseconds);
+        if (!milliseconds) {
+            return DecodeError{"sentAt out of range"};
+        }
+        sentAt = SentTime{std::chrono::milliseconds(*milliseconds)};
+    }
+
     const auto expectedBytes = pixelByteCount(*rows, *cols, *channels, *depth);
     if (expectedBytes > kMaxPixelBytes) {
         return DecodeError{"image too large"};
@@ -218,7 +242,7 @@ std::variant<ImageMessage, DecodeError> decodeChecked(std::string_view headerTex
     // cv::Mat has no read-only view type; the clone is the only access, and gives the image its own pixels.
     const cv::Mat view(*rows, *cols, CV_MAKETYPE(depth->depth, *channels),
                        const_cast<std::byte*>(pixels.data()));
-    return ImageMessage{nameText, view.clone()};
+    return ImageMessage{.name = nameText, .image = view.clone(), .live = live, .sentAt = sentAt};
 }
 
 } // namespace
@@ -239,12 +263,13 @@ bool isSupportedImage(const cv::Mat& image) {
            pixelByteCount(image.rows, image.cols, image.channels(), *depth) <= kMaxPixelBytes;
 }
 
-std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::string_view name) {
+std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::string_view name,
+                                                 const EncodeOptions& options) {
     if (!isSupportedImage(image)) {
         return EncodeError{"image is empty, not 2-D, too large, or of an unsupported depth or channel count"};
     }
     // ordered_json keeps the documented field order, which makes captured traffic easier to read.
-    const nlohmann::ordered_json header = {
+    nlohmann::ordered_json header = {
         {"protocol", kProtocolName},
         {"version", kProtocolVersion},
         {"type", kImageType},
@@ -254,6 +279,16 @@ std::variant<EncodedMessage, EncodeError> encode(const cv::Mat& image, std::stri
         {"depth", findDepth(image.depth())->name},
         {"channels", image.channels()},
     };
+    if (options.live) {
+        header["live"] = true;
+    }
+    // A clock set before 1970 or past 9999 sends no sentAt rather than one the viewer refuses.
+    if (options.sentAt) {
+        const auto milliseconds = options.sentAt->time_since_epoch().count();
+        if (milliseconds >= 0 && milliseconds <= kMaxSentAtMilliseconds) {
+            header["sentAt"] = milliseconds;
+        }
+    }
 
     EncodedMessage message;
     message.header = header.dump();
