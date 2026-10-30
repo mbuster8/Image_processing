@@ -102,7 +102,8 @@ scripts/check.sh --linux                # only the CI's Ubuntu job, in Docker
 
 It stops at the first failing step and names it, so a push meets no surprises. The Ubuntu job needs Docker
 Desktop running. The [build guide](docs/build-guide.md#checking-changes-before-a-push) explains the steps, the
-logs and the optional pre-push hook.
+logs and the optional pre-push hook. In Claude Code, the `local-ci` skill runs the check and explains a
+failure, and the `pr-ready` skill runs it, reviews the branch and drafts the pull request's description.
 
 ### Run the programs
 
@@ -238,6 +239,7 @@ id-vision-lab/
 ├── scripts/               check.sh (the CI pipeline, locally), the Ubuntu package list, the pre-push hook
 ├── docker/                the CI's Ubuntu job as a container
 ├── .github/               continuous integration, CodeQL and Dependabot
+├── .claude/skills/        Claude Code skills: local-ci and pr-ready
 ├── CMakeLists.txt
 ├── CMakePresets.json      debug, release and asan builds
 ├── LICENSE                Apache License 2.0

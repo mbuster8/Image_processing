@@ -171,6 +171,11 @@ git config core.hooksPath scripts/git-hooks   # off again: git config --unset co
 git push --no-verify                          # skips the hook for one push
 ```
 
+In Claude Code, two skills in `.claude/skills/` use the script: **`local-ci`** picks the mode for the change,
+runs it, reads the logs of a failing step and reproduces the failing test; **`pr-ready`** runs the full check,
+reviews the branch's changes against its base and drafts the pull request's title and description with the
+measured results. Neither pushes, commits or opens a pull request unless asked.
+
 ## Working in Qt Creator
 
 These steps are not covered by the automated tests: menu names follow Qt Creator 20.0.2 and are checked
