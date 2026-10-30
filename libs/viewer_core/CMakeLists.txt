@@ -1,5 +1,6 @@
 add_library(viewer_core STATIC
     src/display_converter.cpp
+    src/display_settings.cpp
     src/image_formats.cpp
     src/image_history.cpp
     src/pixel_inspector.cpp

@@ -29,12 +29,14 @@ id_vision_lab_add_test_executable(visual_debug_tests
 id_vision_lab_add_test_executable(viewer_core_tests
     SOURCES
         viewer_core/display_converter_test.cpp
+        viewer_core/display_settings_test.cpp
         viewer_core/image_history_test.cpp
         viewer_core/pixel_inspector_test.cpp
         viewer_core/save_name_test.cpp
         viewer_core/viewport_test.cpp
     LIBRARIES
         viewer_core::viewer_core
+        opencv_imgproc
         GTest::gtest_main)
 
 if(ID_VISION_LAB_BUILD_EXAMPLES)
