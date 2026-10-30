@@ -121,8 +121,14 @@ private:
     void showLiveText(Clock::time_point now);     // the shown channel's info strip
     void updateLiveRow(const viewer_core::LiveChannel& channel, Clock::time_point now);
     void closeLiveChannel(const std::string& name); // the close button
-    void
-    forgetLiveChannel(const std::string& name); // closed or evicted; a shown one goes back to the history
+    // Closed or evicted. A shown channel gives the view back to the image shown before it.
+    void forgetLiveChannel(const std::string& name);
+    void setLiveFrozen(bool frozen);
+    void takeSnapshot();
+    QImage livePicture() const; // the shown channel's frame as on screen; null without one
+    void copyLiveFrame();
+    void saveLiveFrame();
+    void savePicture(const QImage& picture, const QString& name); // asks where, then saves
     void clearView();
     void startRename(viewer_core::ImageId id);
     void dropFromView(viewer_core::ImageId id);

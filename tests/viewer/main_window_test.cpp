@@ -876,7 +876,8 @@ TEST(MainWindowTest, MenusAreInTheirOrder) {
                            QStringLiteral("Image"), QStringLiteral("Server"), QStringLiteral("History"),
                            QStringLiteral("Help")}));
     EXPECT_EQ(entryTitles(window->findChild<QMenu*>(QStringLiteral("menuImage"))->actions()),
-              (QStringList{QStringLiteral("Range"), QStringLiteral("Colours")}));
+              (QStringList{QStringLiteral("Range"), QStringLiteral("Colours"), QStringLiteral("-"),
+                           QStringLiteral("Freeze"), QStringLiteral("Snapshot")}));
     QStringList view{QStringLiteral("Show in Sidebar"), QStringLiteral("Sort By"), QStringLiteral("-"),
                      QStringLiteral("Show Log")};
     if (qt_common::canChooseAppearance()) {
@@ -1727,6 +1728,218 @@ TEST(MainWindowTest, IdleChannelMakesRoomInTheWindow) {
     EXPECT_FALSE(names.contains(QStringLiteral("cam1")));
     EXPECT_TRUE(names.contains(QStringLiteral("cam9")));
     EXPECT_EQ(window.shownLiveChannel(), std::optional<std::string>("cam9")); // cam1 was shown
+}
+
+// --- Freeze and Snapshot ----------------------------------------------------------------------------------
+
+// A window that shows live channel "camera", whose frame is liveFrame(value), received at `receivedAt`.
+void showCamera(MainWindow& window, int value,
+                std::chrono::system_clock::time_point receivedAt = std::chrono::system_clock::now()) {
+    feedLive(window, "camera", liveFrame(value), receivedAt);
+    QApplication::processEvents();
+    if (window.shownLiveChannel() != std::optional<std::string>("camera")) {
+        chooseLiveRow(window, QStringLiteral("camera"));
+    }
+}
+
+void showActive(MainWindow& window) {
+    window.resize(800, 600);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+}
+
+TEST(MainWindowTest, LiveActionsOnlyWhileAChannelIsShown) {
+    const auto window = makeTestWindow();
+    QAction* freeze = action(*window, "actionFreeze");
+    QAction* snapshot = action(*window, "actionSnapshot");
+    ASSERT_NE(freeze, nullptr);
+    ASSERT_NE(snapshot, nullptr);
+    EXPECT_FALSE(freeze->isEnabled());
+    EXPECT_FALSE(snapshot->isEnabled());
+    EXPECT_TRUE(freeze->isCheckable());
+    EXPECT_EQ(freeze->shortcuts(), (QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+Shift+T")),
+                                                        QKeySequence(Qt::Key_Space)}));
+    EXPECT_EQ(snapshot->shortcut(), QKeySequence(QStringLiteral("Ctrl+T")));
+    window->addImage("a", makeImage());
+    EXPECT_FALSE(freeze->isEnabled());
+
+    showCamera(*window, 1);
+    EXPECT_TRUE(freeze->isEnabled());
+    EXPECT_TRUE(snapshot->isEnabled());
+    auto* freezeButton = infoBarOf(*window)->findChild<QToolButton*>(QStringLiteral("freezeButton"));
+    auto* snapshotButton = infoBarOf(*window)->findChild<QToolButton*>(QStringLiteral("snapshotButton"));
+    ASSERT_NE(freezeButton, nullptr);
+    ASSERT_NE(snapshotButton, nullptr);
+    EXPECT_FALSE(freezeButton->isHidden());
+    EXPECT_FALSE(snapshotButton->isHidden());
+    EXPECT_EQ(freezeButton->defaultAction(), freeze);
+    EXPECT_EQ(snapshotButton->defaultAction(), snapshot);
+
+    ASSERT_TRUE(panelOf(*window)->selectImage(1));
+    EXPECT_FALSE(freeze->isEnabled());
+    EXPECT_FALSE(snapshot->isEnabled());
+    EXPECT_TRUE(freezeButton->isHidden());
+    EXPECT_TRUE(snapshotButton->isHidden());
+}
+
+TEST(MainWindowTest, SnapshotAddsTheShownFrameToTheHistory) {
+    const auto window = makeTestWindow();
+    const auto receivedAt = std::chrono::system_clock::now();
+    showCamera(*window, 5, receivedAt);
+    const qint64 milliseconds =
+        std::chrono::duration_cast<std::chrono::milliseconds>(receivedAt.time_since_epoch()).count();
+    const QString name = snapshotName(QStringLiteral("camera"), milliseconds);
+
+    action(*window, "actionSnapshot")->trigger();
+
+    ASSERT_EQ(panelOf(*window)->listedIds(), std::vector<ImageId>{1});
+    EXPECT_EQ(listedName(*window, 1), name);
+    EXPECT_EQ(copiedPicture(*window, 1).pixelColor(0, 0).red(), 5);
+    const LogEntry* logged = findEntry(*logOf(*window), QStringLiteral("Snapshot [%1] (40×30").arg(name));
+    ASSERT_NE(logged, nullptr);
+    EXPECT_EQ(logged->kind, LogKind::Info);
+}
+
+// (Q1) The snapshot is listed; the stream stays in view.
+TEST(MainWindowTest, SnapshotKeepsTheChannelShown) {
+    const auto window = makeTestWindow();
+    showCamera(*window, 5);
+
+    action(*window, "actionSnapshot")->trigger();
+
+    EXPECT_EQ(window->shownLiveChannel(), std::optional<std::string>("camera"));
+    EXPECT_EQ(window->shownImageId(), std::nullopt);
+    EXPECT_EQ(panelOf(*window)->currentImageId(), std::nullopt);
+}
+
+// The snapshot looks as the frame did on screen.
+TEST(MainWindowTest, SnapshotKeepsTheChannelsSettings) {
+    const auto window = makeTestWindow();
+    showCamera(*window, 5);
+    imageSubmenu(*window, QStringLiteral("Colours"))->actions().at(1)->trigger(); // Turbo
+
+    action(*window, "actionSnapshot")->trigger();
+    ASSERT_TRUE(panelOf(*window)->selectImage(1));
+
+    EXPECT_EQ(buttonText(*window, "coloursButton"), QStringLiteral("Colours: Turbo ▾"));
+}
+
+TEST(MainWindowTest, FreezeStopsRedrawsWhileCounting) {
+    ClockedWindow clocked;
+    MainWindow& window = *clocked.window;
+    showSized(window);
+    showCamera(window, 10);
+    QAction* freeze = action(window, "actionFreeze");
+
+    freeze->trigger();
+    feedLive(window, "camera", liveFrame(20));
+    feedLive(window, "camera", liveFrame(30));
+    QApplication::processEvents();
+    window.tick(clocked.now);
+
+    EXPECT_TRUE(freeze->isChecked());
+    EXPECT_EQ(viewedGrey(window), 10);
+    EXPECT_TRUE(infoDetails(window).startsWith(QStringLiteral("frozen · ")))
+        << infoDetails(window).toStdString();
+    EXPECT_TRUE(infoDetails(window).contains(QStringLiteral("1 dropped")))
+        << infoDetails(window).toStdString();
+    EXPECT_EQ(
+        liveRowOf(window, QStringLiteral("camera"))->findChild<QLabel*>(QStringLiteral("liveState"))->text(),
+        QStringLiteral("frozen"));
+
+    freeze->trigger();
+
+    EXPECT_FALSE(freeze->isChecked());
+    EXPECT_EQ(viewedGrey(window), 30);
+}
+
+TEST(MainWindowTest, SpaceFreezesFromTheThumbnails) {
+    const auto window = makeTestWindow();
+    showActive(*window);
+    window->addImage("a", makeImage());
+    showCamera(*window, 1);
+    panelOf(*window)->setFocus();
+
+    QTest::keyClick(panelOf(*window), Qt::Key_Space);
+    EXPECT_TRUE(action(*window, "actionFreeze")->isChecked());
+    QTest::keyClick(panelOf(*window), Qt::Key_Space);
+    EXPECT_FALSE(action(*window, "actionFreeze")->isChecked());
+    EXPECT_EQ(window->shownLiveChannel(), std::optional<std::string>("camera"));
+}
+
+TEST(MainWindowTest, SpaceTypesInTheSearchField) {
+    const auto window = makeTestWindow();
+    showActive(*window);
+    showCamera(*window, 1);
+    QLineEdit* search = sidebarOf(*window)->searchField();
+    search->setFocus();
+
+    QTest::keyClicks(search, QStringLiteral("a b"));
+
+    EXPECT_EQ(search->text(), QStringLiteral("a b"));
+    EXPECT_FALSE(action(*window, "actionFreeze")->isChecked());
+}
+
+// The view never takes the focus, so after a pan the arrow keys still step through the thumbnails.
+TEST(MainWindowTest, ArrowKeysStillStepAfterPanning) {
+    const auto window = makeTestWindow();
+    showActive(*window);
+    window->addImage("a", makeImage());
+    window->addImage("b", makeImage());
+    panelOf(*window)->setFocus();
+    showCamera(*window, 1);
+    auto* view = window->findChild<ImageView*>();
+    const QPointF centre = QRectF(view->rect()).center();
+
+    QTest::mousePress(view, Qt::LeftButton, Qt::NoModifier, centre.toPoint());
+    QTest::mouseMove(view, (centre + QPointF(30, 20)).toPoint());
+    QTest::mouseRelease(view, Qt::LeftButton, Qt::NoModifier, (centre + QPointF(30, 20)).toPoint());
+    ASSERT_TRUE(panelOf(*window)->hasFocus());
+
+    QTest::keyClick(panelOf(*window), Qt::Key_Down);
+
+    EXPECT_TRUE(window->shownImageId().has_value());
+    EXPECT_EQ(window->shownLiveChannel(), std::nullopt);
+}
+
+TEST(MainWindowTest, CopyImageTakesTheLiveFrame) {
+    const auto window = makeTestWindow();
+    showCamera(*window, 77);
+    QGuiApplication::clipboard()->clear();
+
+    ASSERT_TRUE(action(*window, "actionCopyImage")->isEnabled());
+    action(*window, "actionCopyImage")->trigger();
+
+    const QImage copied = QGuiApplication::clipboard()->image();
+    EXPECT_EQ(copied.size(), QSize(40, 30));
+    EXPECT_EQ(copied.pixelColor(0, 0).red(), 77);
+    EXPECT_NE(findEntry(*logOf(*window), QStringLiteral("Copied [camera] to the clipboard")), nullptr);
+}
+
+// Live frames and snapshots stay in memory, even with Keep Images Between Sessions on.
+TEST(MainWindowTest, SnapshotsAndLiveFramesAreNeverStored) {
+    const QTemporaryDir root;
+    setKeepImagesSetting(true);
+    {
+        const auto window = makeRestoredWindow(root.path());
+        ASSERT_NE(window, nullptr);
+        for (int i = 0; i < 5; ++i) {
+            feedLive(*window, "camera", liveFrame(i));
+            QApplication::processEvents();
+        }
+        action(*window, "actionSnapshot")->trigger();
+        window->duplicateImage(1); // a copy of a snapshot is one too
+        window->addImage("still", makeImage());
+
+        ASSERT_TRUE(waitForStoredFiles(root.path(), 1));
+        QTest::qWait(200);
+        EXPECT_EQ(storedFiles(root.path()), 1);
+    }
+
+    const auto window = makeRestoredWindow(root.path());
+    ASSERT_NE(window, nullptr);
+    EXPECT_EQ(listedNames(*window), std::vector<QString>{QStringLiteral("still")});
 }
 
 } // namespace

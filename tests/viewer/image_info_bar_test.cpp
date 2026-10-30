@@ -70,6 +70,15 @@ TEST(ImageInfoBar, ClockTimeIsLocalToTheSecond) {
     EXPECT_EQ(clockTime(local.toMSecsSinceEpoch() * 1000 + 999), QStringLiteral("14:05:09"));
 }
 
+// A snapshot is named after its frame's receive time, local and to the millisecond, so a burst of them stays
+// apart.
+TEST(ImageInfoBar, SnapshotNameUsesLocalMilliseconds) {
+    const QDateTime local(QDate(2026, 10, 30), QTime(14, 3, 22, 517));
+
+    EXPECT_EQ(snapshotName(QStringLiteral("camera"), local.toMSecsSinceEpoch()),
+              QStringLiteral("camera 14:03:22.517"));
+}
+
 TEST(ImageInfoBar, LiveDetailsShowStateRatesDropsAndAge) {
     using namespace std::chrono_literals;
     const QString summary = QString::fromUtf8("1920×1080 · 3 ch · 8U");

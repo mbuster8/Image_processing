@@ -39,8 +39,21 @@ void StorageController::restore(Adopt adopt) {
     });
 }
 
+namespace {
+
+// Live snapshots stay in memory, even with Keep Images Between Sessions on: a stream should not fill the
+// disk.
+bool isStored(const viewer_core::ReceivedImage& entry) {
+    return entry.origin.source != viewer_core::ImageSource::LiveSnapshot;
+}
+
+} // namespace
+
 // The worker gets its own reference to the pixels, which nothing modifies.
 void StorageController::store(const viewer_core::ReceivedImage& entry) {
+    if (!isStored(entry)) {
+        return;
+    }
     call([id = entry.id, name = entry.name, original = entry.original](StorageWorker& worker) {
         worker.store(id, name, original);
     });
@@ -56,7 +69,9 @@ void StorageController::sync(const std::deque<viewer_core::ReceivedImage>& newes
     }
     std::vector<IndexRow> rows;
     for (const viewer_core::ReceivedImage& entry : newestFirst) {
-        rows.push_back({entry.id, entry.name, entry.origin});
+        if (isStored(entry)) {
+            rows.push_back({entry.id, entry.name, entry.origin});
+        }
     }
     call([rows = std::move(rows)](StorageWorker& worker) { worker.updateIndex(rows); });
 }

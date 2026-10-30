@@ -33,6 +33,11 @@ QString liveDetails(const QString& summary, const viewer_core::LiveChannel& chan
     return text;
 }
 
+QString snapshotName(const QString& channel, qint64 epochMilliseconds) {
+    return channel + u' ' +
+           QDateTime::fromMSecsSinceEpoch(epochMilliseconds).toString(QStringLiteral("HH:mm:ss.zzz"));
+}
+
 QString clockTime(qint64 epochMicroseconds) {
     return QDateTime::fromMSecsSinceEpoch(epochMicroseconds / 1000).toString(QStringLiteral("HH:mm:ss"));
 }

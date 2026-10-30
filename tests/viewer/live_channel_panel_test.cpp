@@ -143,6 +143,26 @@ TEST(LiveChannelPanel, ClickSelectsAndEmits) {
     EXPECT_EQ(shown.panel->selectedChannel(), QStringLiteral("edges"));
 }
 
+// Choosing a channel leaves the keyboard where it was, so the arrow keys still step through the thumbnails.
+TEST(LiveChannelPanel, ClickLeavesTheFocusWhereItWas) {
+    QWidget window;
+    auto* field = new QLineEdit(&window);
+    auto* panel = new LiveChannelPanel(&window);
+    panel->move(0, 40);
+    window.resize(220, 300);
+    window.show();
+    window.activateWindow();
+    ASSERT_TRUE(QTest::qWaitForWindowActive(&window));
+    panel->addChannel(QStringLiteral("camera"));
+    QApplication::processEvents();
+    field->setFocus();
+
+    QTest::mouseClick(rowOf(*panel, QStringLiteral("camera")), Qt::LeftButton);
+
+    EXPECT_EQ(panel->selectedChannel(), QStringLiteral("camera"));
+    EXPECT_TRUE(field->hasFocus());
+}
+
 TEST(LiveChannelPanel, SetSelectedIsQuiet) {
     ShownPanel shown;
     shown.panel->addChannel(QStringLiteral("camera"));

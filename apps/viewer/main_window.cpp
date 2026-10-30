@@ -207,7 +207,9 @@ MainWindow::MainWindow(visual_debug::ServerOptions serverOptions, const QString&
 
     connect(m_ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
     connect(m_ui->actionSaveAs, &QAction::triggered, this, [this] {
-        if (m_currentId) {
+        if (m_liveChannel) {
+            saveLiveFrame();
+        } else if (m_currentId) {
             saveImage(*m_currentId);
         } else {
             log(LogKind::Warning, tr("No image to save"));
@@ -227,6 +229,18 @@ MainWindow::MainWindow(visual_debug::ServerOptions serverOptions, const QString&
     for (QMenu* shared : {displayControl->rangeMenu(), displayControl->coloursMenu()}) {
         m_ui->menuImage->addMenu(shared->title())->addActions(shared->actions());
     }
+    // Freeze and Snapshot act on the live channel in view. Space freezes from anywhere but a text field,
+    // which takes printable keys before shortcuts.
+    m_ui->actionFreeze->setShortcuts(
+        {QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T), QKeySequence(Qt::Key_Space)});
+    m_ui->actionFreeze->setIcon(qt_common::makeOutlineIcon(qt_common::OutlineIcon::Pause));
+    m_ui->actionSnapshot->setIcon(qt_common::makeOutlineIcon(qt_common::OutlineIcon::Camera));
+    m_ui->menuImage->addSeparator();
+    m_ui->menuImage->addAction(m_ui->actionFreeze);
+    m_ui->menuImage->addAction(m_ui->actionSnapshot);
+    m_infoBar->setLiveActions(m_ui->actionFreeze, m_ui->actionSnapshot);
+    connect(m_ui->actionFreeze, &QAction::triggered, this, &MainWindow::setLiveFrozen);
+    connect(m_ui->actionSnapshot, &QAction::triggered, this, &MainWindow::takeSnapshot);
     displayControl->setAutoRangeProvider([this] {
         if (const auto* channel = m_liveChannel ? m_live.find(*m_liveChannel) : nullptr) {
             return viewer_core::autoRange(channel->shown); // the frame on screen, frozen or not
@@ -253,7 +267,14 @@ MainWindow::MainWindow(visual_debug::ServerOptions serverOptions, const QString&
     };
     connect(m_ui->actionRename, &QAction::triggered, this, onShownImage(&MainWindow::startRename));
     connect(m_ui->actionDuplicate, &QAction::triggered, this, onShownImage(&MainWindow::duplicateImage));
-    connect(m_ui->actionCopyImage, &QAction::triggered, this, onShownImage(&MainWindow::copyImage));
+    connect(m_ui->actionCopyImage, &QAction::triggered, this,
+            [this, copyShown = onShownImage(&MainWindow::copyImage)] {
+                if (m_liveChannel) {
+                    copyLiveFrame();
+                } else {
+                    copyShown();
+                }
+            });
     connect(m_ui->actionDelete, &QAction::triggered, this, onShownImage(&MainWindow::deleteImage));
     connect(qApp, &QApplication::focusChanged, this, &MainWindow::updateEditActions);
     connect(m_ui->actionPauseServer, &QAction::triggered, this, &MainWindow::togglePause);
@@ -505,11 +526,17 @@ bool MainWindow::addImage(std::string name, cv::Mat image, viewer_core::ImageOri
         log(LogKind::Error, tr("Cannot show image: %1").arg(error.what()));
         return false;
     }
-    // Timed when it arrived: for a received image, when the server thread finished decoding it.
+    // Timed when it arrived: for a received image, when the server thread finished decoding it. A snapshot is
+    // logged when it is taken; its entry keeps its frame's receive time.
     const auto& entry = *m_history.find(added.id);
-    const QString what = origin.source == viewer_core::ImageSource::OpenedFile ? tr("Opened [%1] (%2)")
-                                                                               : tr("Received [%1] (%2)");
-    const bool timed = origin.arrivedAt != std::chrono::system_clock::time_point{};
+    QString what = tr("Received [%1] (%2)");
+    if (origin.source == viewer_core::ImageSource::OpenedFile) {
+        what = tr("Opened [%1] (%2)");
+    } else if (origin.source == viewer_core::ImageSource::LiveSnapshot) {
+        what = tr("Snapshot [%1] (%2)");
+    }
+    const bool timed = origin.arrivedAt != std::chrono::system_clock::time_point{} &&
+                       origin.source != viewer_core::ImageSource::LiveSnapshot;
     m_log->append({timed ? origin.arrivedAt : std::chrono::system_clock::now(), LogKind::Info,
                    what.arg(singleLine(QString::fromStdString(entry.name)), imageDetails(entry))});
     // While a rename is open, arrivals do not take the selection, so a burst cannot move the edit; while a
@@ -614,14 +641,16 @@ void MainWindow::copyImage(viewer_core::ImageId id) {
     }
 }
 
+void MainWindow::saveImage(viewer_core::ImageId id) {
+    if (const auto* entry = m_history.find(id)) {
+        savePicture(shownPicture(*entry), QString::fromStdString(entry->name));
+    }
+}
+
 // Saves what is on screen (the 8-bit picture, range and colours included), not the original: PNG and JPEG
 // cannot hold every depth. QImage::save is used because cv::imwrite would swap red and blue in an RGBA image.
-void MainWindow::saveImage(viewer_core::ImageId id) {
-    const auto* entry = m_history.find(id);
-    if (entry == nullptr) {
-        return;
-    }
-    QString suggestedName = QString::fromStdString(entry->name);
+void MainWindow::savePicture(const QImage& picture, const QString& name) {
+    QString suggestedName = name;
     suggestedName.replace(QRegularExpression(QStringLiteral(R"([\\/:*?"<>|])")), QStringLiteral("_"));
     suggestedName = QString::fromStdString(viewer_core::saveNameStem(suggestedName.toStdString()));
     QString path = QFileDialog::getSaveFileName(
@@ -634,7 +663,7 @@ void MainWindow::saveImage(viewer_core::ImageId id) {
         path += QStringLiteral(".png");
     }
     const QString shownPath = QDir::toNativeSeparators(path);
-    if (shownPicture(*entry).save(path)) {
+    if (picture.save(path)) {
         log(LogKind::Info, tr("Saved [%1]").arg(shownPath));
     } else {
         log(LogKind::Error, tr("Could not save [%1]").arg(shownPath));
@@ -758,6 +787,7 @@ void MainWindow::showLiveChannel(const std::string& name) {
     m_thumbnails->clearChoice();
     m_sidebar->liveChannels()->setSelected(QString::fromStdString(name));
     m_infoBar->displayControl()->setState(m_displaySettings.get(name), channel->shown.channels() == 1);
+    m_ui->actionFreeze->setChecked(channel->frozen); // each channel is frozen or not by itself
     m_pixelLabel->clear();
     drawLiveFrame(ImageView::KeepView::No);
     showLiveText(m_clock());
@@ -852,6 +882,78 @@ void MainWindow::forgetLiveChannel(const std::string& name) {
     } else {
         clearView();
     }
+}
+
+// Frames go on arriving and being counted while frozen; unfreezing shows the newest.
+void MainWindow::setLiveFrozen(bool frozen) {
+    if (!m_liveChannel) {
+        return;
+    }
+    if (m_live.setFrozen(*m_liveChannel, frozen)) {
+        drawLiveFrame(ImageView::KeepView::IfSameSize);
+    }
+    const Clock::time_point now = m_clock();
+    updateLiveRow(*m_live.find(*m_liveChannel), now);
+    showLiveText(now);
+}
+
+// The frame in view, frozen or not, into the history under "<channel> <its receive time>", with the channel's
+// display settings, so it looks as it did on screen. The channel stays in view.
+void MainWindow::takeSnapshot() {
+    const viewer_core::LiveChannel* channel = m_liveChannel ? m_live.find(*m_liveChannel) : nullptr;
+    if (channel == nullptr || channel->shown.empty()) {
+        return;
+    }
+    const qint64 milliseconds =
+        std::chrono::duration_cast<std::chrono::milliseconds>(channel->shownReceivedAt.time_since_epoch())
+            .count();
+    // A channel's name may already be at the wire format's limit: the time is kept, the name cut.
+    QString channelName = QString::fromStdString(channel->name);
+    QString name = snapshotName(channelName, milliseconds);
+    while (static_cast<std::size_t>(name.toUtf8().size()) > visual_debug::kMaxNameBytes &&
+           !channelName.isEmpty()) {
+        channelName.chop(channelName.back().isLowSurrogate() ? 2 : 1);
+        name = snapshotName(channelName, milliseconds);
+    }
+    const std::string snapshot = name.toStdString();
+    m_displaySettings.set(snapshot, m_displaySettings.get(channel->name));
+    addImage(snapshot, channel->shown,
+             {.source = viewer_core::ImageSource::LiveSnapshot,
+              .fileBytes = std::nullopt,
+              .arrivedAt = channel->shownReceivedAt});
+}
+
+QImage MainWindow::livePicture() const {
+    const viewer_core::LiveChannel* channel = m_liveChannel ? m_live.find(*m_liveChannel) : nullptr;
+    if (channel == nullptr || channel->shown.empty()) {
+        return {};
+    }
+    return qt_common::toQImage(
+        viewer_core::toDisplayImage(channel->shown, m_displaySettings.get(channel->name)));
+}
+
+void MainWindow::copyLiveFrame() {
+    const QImage picture = livePicture();
+    if (picture.isNull()) {
+        return;
+    }
+    QGuiApplication::clipboard()->setImage(picture);
+    log(LogKind::Info,
+        tr("Copied [%1] to the clipboard").arg(singleLine(QString::fromStdString(*m_liveChannel))));
+}
+
+// Named as its snapshot would be, so frames saved from one stream do not overwrite each other.
+void MainWindow::saveLiveFrame() {
+    const viewer_core::LiveChannel* channel = m_liveChannel ? m_live.find(*m_liveChannel) : nullptr;
+    if (channel == nullptr || channel->shown.empty()) {
+        return;
+    }
+    const QImage picture =
+        livePicture(); // the frame shown now, even if a newer one arrives during the dialog
+    savePicture(picture, snapshotName(QString::fromStdString(channel->name),
+                                      std::chrono::duration_cast<std::chrono::milliseconds>(
+                                          channel->shownReceivedAt.time_since_epoch())
+                                          .count()));
 }
 
 // Selecting it in the sidebar shows it; one the search hides is shown without a selection.
@@ -957,13 +1059,20 @@ void MainWindow::updateEditActions() {
     QWidget* focus = QApplication::focusWidget();
     const bool typing = isTextField(focus) || (focus != nullptr && m_logPanel->isAncestorOf(focus));
     const bool shown = m_currentId.has_value();
+    const bool live = m_liveChannel.has_value();
     m_ui->actionUndoDelete->setEnabled(m_history.undoDepth() > 0 && !typing);
     m_ui->actionRename->setEnabled(shown);
     m_ui->actionDuplicate->setEnabled(shown);
-    m_ui->actionCopyImage->setEnabled(shown && !typing);
+    m_ui->actionCopyImage->setEnabled((shown || live) && !typing);
     m_ui->actionDelete->setEnabled(shown && !typing);
     m_ui->actionClearHistory->setEnabled(m_history.size() > 0);
-    m_ui->menuImage->setEnabled(shown || m_liveChannel.has_value());
+    m_ui->menuImage->setEnabled(shown || live);
+    // Disabled, they leave Space to the thumbnails and buttons while no channel is shown.
+    m_ui->actionFreeze->setEnabled(live);
+    m_ui->actionSnapshot->setEnabled(live);
+    if (!live) {
+        m_ui->actionFreeze->setChecked(false);
+    }
 }
 
 // The original values: of the history image, or of the live frame on screen.

@@ -10,6 +10,7 @@
 #include <optional>
 
 class DisplaySettingsControl;
+class QAction;
 class QLabel;
 class QLineEdit;
 class QToolButton;
@@ -23,10 +24,12 @@ public:
     explicit ImageInfoBar(QWidget* parent = nullptr);
 
     void showImage(viewer_core::ImageId id, const QString& name, const QString& details);
-    // A live channel has no pencil: its name is the sender's. Ends a rename.
+    // A live channel has no pencil: its name is the sender's. Ends a rename, and shows the live actions.
     void showLiveChannel(const QString& name, const QString& details);
     void clear();
     DisplaySettingsControl* displayControl() const;
+    // Freeze and Snapshot, as buttons at the right end while a live channel is shown.
+    void setLiveActions(QAction* freeze, QAction* snapshot);
 
     // Swaps the name for a text field, bound to the image shown now. Enter or leaving the field saves; Esc
     // cancels. Nothing while no image is shown.
@@ -51,6 +54,8 @@ private:
     QToolButton* m_renameButton;
     QLabel* m_details;
     DisplaySettingsControl* m_displayControl;
+    QToolButton* m_freezeButton;
+    QToolButton* m_snapshotButton;
     std::optional<viewer_core::ImageId> m_shownId;
     QString m_shownName;
     std::optional<viewer_core::ImageId> m_renamingId;

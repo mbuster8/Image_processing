@@ -31,5 +31,8 @@ QString imageDetails(const viewer_core::ReceivedImage& image, const QLocale& loc
 QString liveDetails(const QString& summary, const viewer_core::LiveChannel& channel,
                     const viewer_core::LiveStats& stats);
 
+// "camera 14:03:22.517": a snapshot's name, from its frame's receive time, local and to the millisecond.
+QString snapshotName(const QString& channel, qint64 epochMilliseconds);
+
 // "14:05:09": local time to the second, as the log line and the thumbnails' tool tips show it.
 QString clockTime(qint64 epochMicroseconds);

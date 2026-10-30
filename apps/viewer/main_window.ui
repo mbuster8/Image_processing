@@ -172,6 +172,28 @@
     <string>&amp;Clear History…</string>
    </property>
   </action>
+  <action name="actionFreeze">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>F&amp;reeze</string>
+   </property>
+   <property name="toolTip">
+    <string>Keep this frame in view while frames go on arriving</string>
+   </property>
+  </action>
+  <action name="actionSnapshot">
+   <property name="text">
+    <string>&amp;Snapshot</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy the frame in view into the history</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
   <action name="actionFind">
    <property name="text">
     <string>&amp;Find…</string>

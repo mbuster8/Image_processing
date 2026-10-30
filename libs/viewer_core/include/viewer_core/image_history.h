@@ -20,7 +20,8 @@ inline constexpr std::size_t kDefaultHistoryCapacity = 100;
 // 100 frames of 4K video, original plus display copy, would need about 11 GiB.
 inline constexpr std::size_t kDefaultHistoryByteBudget = std::size_t{2} * 1024 * 1024 * 1024;
 
-enum class ImageSource { Received, OpenedFile };
+// A LiveSnapshot is a live frame copied into the history; like live frames, it is never stored on disk.
+enum class ImageSource { Received, OpenedFile, LiveSnapshot };
 
 // Where an entry came from, and its times. The times live here so that storage keeps them with the rest.
 struct ImageOrigin {

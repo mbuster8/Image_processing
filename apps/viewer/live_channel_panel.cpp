@@ -196,6 +196,9 @@ LiveChannelPanel::LiveChannelPanel(QWidget* parent)
     m_scroll->setWidgetResizable(true);
     m_scroll->setFrameShape(QFrame::NoFrame);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // A scroll area takes the focus on a click by default; a click on a row would take the arrow keys from
+    // the thumbnails.
+    m_scroll->setFocusPolicy(Qt::NoFocus);
 
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
