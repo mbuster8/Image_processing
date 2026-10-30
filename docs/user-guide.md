@@ -382,6 +382,11 @@ threshold 192: Delivered
 The viewer shows three black-and-white images whose edge moves right. `sendImage` can be called from any
 thread; calls share one connection and take turns.
 
+For a stream, such as a camera or a video, send each frame with `visual_debug::sendLive(frame, "camera")`
+instead; a `Client` has the same `sendLive`. It shares `sendImage`'s connection, marks the frame as part of
+the live channel `camera`, and stamps it with the time it was sent (the `live` and `sentAt` fields of the
+[wire format](wire-format.md)). A viewer that predates live channels shows it as an ordinary image.
+
 ### 2. A `Client` with your own options
 
 For more control, create one `visual_debug::Client` and keep it for the life of your program. This

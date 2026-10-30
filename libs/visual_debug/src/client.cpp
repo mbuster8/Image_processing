@@ -31,7 +31,7 @@ class Client::Impl {
 public:
     explicit Impl(ClientOptions options) : m_options(std::move(options)) {}
 
-    SendResult send(const cv::Mat& image, std::string_view name) {
+    SendResult send(const cv::Mat& image, std::string_view name, bool live) {
         // Cheap checks first: while no viewer is available, an image is never encoded, so a region of
         // interest is not copied on every frame.
         if (!isSupportedImage(image)) {
@@ -53,7 +53,13 @@ public:
             return SendResult::ViewerUnavailable;
         }
 
-        const auto encoded = encode(image, name);
+        EncodeOptions options;
+        if (live) {
+            options = {.live = true,
+                       .sentAt =
+                           std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now())};
+        }
+        const auto encoded = encode(image, name, options);
         if (std::holds_alternative<EncodeError>(encoded)) {
             return SendResult::InvalidImage;
         }
@@ -129,8 +135,16 @@ Client::Client(ClientOptions options) : m_impl(std::make_unique<Impl>(std::move(
 Client::~Client() = default;
 
 SendResult Client::send(const cv::Mat& image, std::string_view name) noexcept {
+    return sendGuarded(image, name, false);
+}
+
+SendResult Client::sendLive(const cv::Mat& frame, std::string_view channel) noexcept {
+    return sendGuarded(frame, channel, true);
+}
+
+SendResult Client::sendGuarded(const cv::Mat& image, std::string_view name, bool live) noexcept {
     try {
-        return m_impl->send(image, name);
+        return m_impl->send(image, name, live);
     } catch (...) {
         // A debugging aid must never take the host application down: ZeroMQ errors, a malformed reply or
         // running out of memory while copying a large image all end here.

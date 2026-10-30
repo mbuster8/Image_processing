@@ -90,6 +90,51 @@ TEST(ClientServer, DeliversImageToSink) {
     EXPECT_EQ(cv::norm(received.image, image, cv::NORM_INF), 0.0);
 }
 
+TEST(ClientServer, DeliversLiveFrameWithSentAt) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    Client client({.endpoint = server.boundEndpoint()});
+
+    const auto before = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
+    EXPECT_EQ(client.sendLive(smallImage(), "camera"), SendResult::Delivered);
+    const auto after = std::chrono::system_clock::now();
+
+    ASSERT_TRUE(sink.waitForCount(1, 1s));
+    const auto received = sink.messages().front();
+    EXPECT_EQ(received.name, "camera");
+    EXPECT_TRUE(received.live);
+    ASSERT_TRUE(received.sentAt.has_value());
+    EXPECT_LE(before, *received.sentAt);
+    EXPECT_LE(*received.sentAt, after);
+}
+
+TEST(ClientServer, StillsStayStills) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    Client client({.endpoint = server.boundEndpoint()});
+
+    EXPECT_EQ(client.send(smallImage(), "x"), SendResult::Delivered);
+
+    ASSERT_TRUE(sink.waitForCount(1, 1s));
+    EXPECT_FALSE(sink.messages().front().live);
+    EXPECT_FALSE(sink.messages().front().sentAt.has_value());
+}
+
+TEST(ClientServer, PausedServerRefusesLiveFrames) {
+    CollectingSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    server.setPaused(true);
+    Client client({.endpoint = server.boundEndpoint()});
+
+    EXPECT_EQ(client.sendLive(smallImage(), "camera"), SendResult::Rejected);
+
+    EXPECT_EQ(sink.count(), 0u);
+    EXPECT_EQ(sink.rejections(), std::vector<std::string>{"viewer paused"});
+}
+
 TEST(ClientServer, ReportsViewerUnavailableWithinReplyTimeout) {
     Client client({.endpoint = unusedEndpoint(), .replyTimeout = 100ms});
 
