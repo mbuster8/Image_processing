@@ -15,6 +15,7 @@
 #include <QHoverEvent>
 #include <QImage>
 #include <QLineEdit>
+#include <QLocale>
 #include <QMenu>
 #include <QPalette>
 #include <QPoint>
@@ -489,6 +490,22 @@ TEST(ThumbnailPanel, SortsByNameNumbersByValue) {
     panel.addImage(makeEntry(3, "Stage 1"));
 
     panel.setSort(SidebarSort::Name, Qt::AscendingOrder);
+
+    EXPECT_EQ(panel.listedIds(), (std::vector<ImageId>{3, 2, 1}));
+}
+
+// Qt's collator compares plain strings in the C locale, which a Linux system with LANG=C.UTF-8 (such as a CI
+// runner) reports, so numbers would sort as text there.
+TEST(ThumbnailPanel, SortsNumbersByValueInTheCLocale) {
+    const QLocale previous;
+    QLocale::setDefault(QLocale::c());
+    ThumbnailPanel panel;
+    panel.addImage(makeEntry(1, "stage 10"));
+    panel.addImage(makeEntry(2, "stage 2"));
+    panel.addImage(makeEntry(3, "Stage 1"));
+
+    panel.setSort(SidebarSort::Name, Qt::AscendingOrder);
+    QLocale::setDefault(previous);
 
     EXPECT_EQ(panel.listedIds(), (std::vector<ImageId>{3, 2, 1}));
 }

@@ -4,6 +4,7 @@
 #include "epoch_time.h"
 #include "qimage_conversion.h"
 
+#include <QLocale>
 #include <QStringList>
 #include <QVariant>
 #include <QtGlobal>
@@ -142,7 +143,19 @@ int ThumbnailModel::rowOf(viewer_core::ImageId id) const {
     return found == m_rows.end() ? -1 : static_cast<int>(found - m_rows.begin());
 }
 
-ThumbnailFilterModel::ThumbnailFilterModel(QObject* parent) : QSortFilterProxyModel(parent) {
+namespace {
+
+// Qt's collator compares plain strings in the C locale, which a Linux system with LANG=C.UTF-8 reports, so
+// "stage 10" would sort before "stage 2" there. English collation sorts numbers by value.
+QLocale nameSortLocale() {
+    const QLocale locale;
+    return locale.language() == QLocale::C ? QLocale(QLocale::English) : locale;
+}
+
+} // namespace
+
+ThumbnailFilterModel::ThumbnailFilterModel(QObject* parent)
+    : QSortFilterProxyModel(parent), m_nameCollator(nameSortLocale()) {
     m_nameCollator.setNumericMode(true);
     m_nameCollator.setCaseSensitivity(Qt::CaseInsensitive);
     setDynamicSortFilter(true);
