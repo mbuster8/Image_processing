@@ -15,6 +15,8 @@
 
 namespace {
 
+using visual_debug::Acceptance;
+
 visual_debug::ImageMessage smallMessage() { return {"x", cv::Mat(1, 1, CV_8UC1, cv::Scalar(0))}; }
 
 TEST(QtImageSink, DeliversOnReceiverThread) {
@@ -26,7 +28,7 @@ TEST(QtImageSink, DeliversOnReceiverThread) {
         [&](const visual_debug::ImageMessage&) { slotThread = QThread::currentThreadId(); },
         Qt::QueuedConnection);
 
-    bool accepted = false;
+    Acceptance accepted = Acceptance::Busy;
     std::thread serverThread([&] { accepted = sink.onImageReceived(smallMessage()); });
     serverThread.join();
 
@@ -35,7 +37,7 @@ TEST(QtImageSink, DeliversOnReceiverThread) {
     while (slotThread == nullptr && timer.elapsed() < 1000) {
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     }
-    EXPECT_TRUE(accepted);
+    EXPECT_EQ(accepted, Acceptance::Taken);
     EXPECT_EQ(slotThread, QThread::currentThreadId());
 }
 
@@ -43,18 +45,18 @@ TEST(QtImageSink, ReportsBusyWhenUiFallsBehind) {
     QtImageSink sink;
 
     for (int i = 0; i < QtImageSink::kMaxPendingImages; ++i) {
-        EXPECT_TRUE(sink.onImageReceived(smallMessage())) << i;
+        EXPECT_EQ(sink.onImageReceived(smallMessage()), Acceptance::Taken) << i;
     }
-    EXPECT_FALSE(sink.onImageReceived(smallMessage()));
+    EXPECT_EQ(sink.onImageReceived(smallMessage()), Acceptance::Busy);
 
     sink.markHandled();
-    EXPECT_TRUE(sink.onImageReceived(smallMessage()));
+    EXPECT_EQ(sink.onImageReceived(smallMessage()), Acceptance::Taken);
 }
 
 TEST(QtImageSink, WaitsForTheUiBeforeReportingBusy) {
     QtImageSink sink;
     for (int i = 0; i < QtImageSink::kMaxPendingImages; ++i) {
-        ASSERT_TRUE(sink.onImageReceived(smallMessage())) << i;
+        ASSERT_EQ(sink.onImageReceived(smallMessage()), Acceptance::Taken) << i;
     }
 
     // The UI catches up while the server thread waits: the image is accepted, not refused.
@@ -62,10 +64,10 @@ TEST(QtImageSink, WaitsForTheUiBeforeReportingBusy) {
         std::this_thread::sleep_for(QtImageSink::kMaxWaitForUi / 4);
         sink.markHandled();
     });
-    const bool accepted = sink.onImageReceived(smallMessage());
+    const Acceptance accepted = sink.onImageReceived(smallMessage());
     ui.join();
 
-    EXPECT_TRUE(accepted);
+    EXPECT_EQ(accepted, Acceptance::Taken);
 }
 
 // Rejections are counted on the server thread and taken by the UI in one go, so a flood of them costs one

@@ -6,16 +6,16 @@ QtImageSink::QtImageSink(QObject* parent) : QObject(parent) {
     qRegisterMetaType<visual_debug::ImageMessage>(); // queued connections copy the argument by its metatype
 }
 
-bool QtImageSink::onImageReceived(visual_debug::ImageMessage message) {
+visual_debug::Acceptance QtImageSink::onImageReceived(visual_debug::ImageMessage message) {
     {
         std::unique_lock lock(m_mutex);
         if (!m_slotFreed.wait_for(lock, kMaxWaitForUi, [this] { return m_pending < kMaxPendingImages; })) {
-            return false;
+            return visual_debug::Acceptance::Busy;
         }
         ++m_pending;
     }
     emit imageReceived(std::move(message));
-    return true;
+    return visual_debug::Acceptance::Taken;
 }
 
 void QtImageSink::markHandled() {

@@ -30,7 +30,7 @@ public:
 
     explicit QtImageSink(QObject* parent = nullptr);
 
-    bool onImageReceived(visual_debug::ImageMessage message) override;
+    visual_debug::Acceptance onImageReceived(visual_debug::ImageMessage message) override;
 
     // Counts the reason and returns at once. Rejections reach the UI as counts, never as one event each, so a
     // flood of them cannot grow Qt's event queue: requestsRejected is emitted only when the first count

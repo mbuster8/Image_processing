@@ -151,10 +151,15 @@ private:
         }
         auto message = std::get<ImageMessage>(std::move(decoded));
         message.receivedAt = std::chrono::system_clock::now();
-        if (!m_sink.onImageReceived(std::move(message))) {
+        switch (m_sink.onImageReceived(std::move(message))) {
+        case Acceptance::Taken:
+            return {std::string(kOkReply), {}};
+        case Acceptance::Busy:
             return rejected("viewer busy");
+        case Acceptance::TooManyLiveChannels:
+            return rejected("too many live channels");
         }
-        return {std::string(kOkReply), {}};
+        return rejected(kInternalError);
     }
 
     ImageSink& m_sink;

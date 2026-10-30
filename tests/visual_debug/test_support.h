@@ -39,13 +39,13 @@ private:
 // Thread-safe sink that keeps every image it receives.
 class CollectingSink : public RejectionRecordingSink {
 public:
-    bool onImageReceived(visual_debug::ImageMessage message) override {
+    visual_debug::Acceptance onImageReceived(visual_debug::ImageMessage message) override {
         {
             std::lock_guard lock(m_mutex);
             m_messages.push_back(std::move(message));
         }
         m_changed.notify_all();
-        return true;
+        return visual_debug::Acceptance::Taken;
     }
 
     // False if fewer than `count` images have arrived when the timeout expires.
@@ -73,7 +73,17 @@ private:
 // A viewer that is always too busy to take another image.
 class BusySink : public RejectionRecordingSink {
 public:
-    bool onImageReceived(visual_debug::ImageMessage) override { return false; }
+    visual_debug::Acceptance onImageReceived(visual_debug::ImageMessage) override {
+        return visual_debug::Acceptance::Busy;
+    }
+};
+
+// A viewer whose live channels are all taken.
+class NoLiveChannelLeftSink : public RejectionRecordingSink {
+public:
+    visual_debug::Acceptance onImageReceived(visual_debug::ImageMessage) override {
+        return visual_debug::Acceptance::TooManyLiveChannels;
+    }
 };
 
 inline void setEnvironment(const char* name, const char* value) {

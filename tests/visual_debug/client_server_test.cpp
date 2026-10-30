@@ -142,6 +142,27 @@ TEST(ClientServer, ReportsRejectedWhenViewerBusy) {
     EXPECT_EQ(client.send(smallImage(), "x"), SendResult::Rejected);
 }
 
+// A sink can refuse for a reason of its own; the server answers with that reason's fixed reply text.
+TEST(ClientServer, RefusesWithTheSinksReason) {
+    test_support::NoLiveChannelLeftSink sink;
+    Server server(sink, {.endpoint = kAnyLoopbackPort});
+    ASSERT_TRUE(started(server));
+    Client client({.endpoint = server.boundEndpoint()});
+
+    EXPECT_EQ(client.send(smallImage(), "x"), SendResult::Rejected);
+
+    const auto encoded = std::get<visual_debug::EncodedMessage>(visual_debug::encode(smallImage(), "y"));
+    const auto pixels = encoded.pixelBytes();
+    const auto reply = test_support::rawRequest(
+        server.boundEndpoint(),
+        {encoded.header, std::string(reinterpret_cast<const char*>(pixels.data()), pixels.size())});
+    ASSERT_TRUE(reply.has_value());
+    EXPECT_EQ(reply->value("status", ""), "error");
+    EXPECT_EQ(reply->value("reason", ""), "too many live channels");
+    EXPECT_EQ(sink.rejections(),
+              (std::vector<std::string>{"too many live channels", "too many live channels"}));
+}
+
 TEST(ClientServer, RecoversAfterServerStarts) {
     const auto endpoint = unusedEndpoint();
     Client client({.endpoint = endpoint, .replyTimeout = 100ms, .retryInterval = 300ms});
