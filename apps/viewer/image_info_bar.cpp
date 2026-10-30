@@ -60,7 +60,23 @@ void ImageInfoBar::showImage(viewer_core::ImageId id, const QString& name, const
     m_shownName = name;
     m_name->setText(singleLine(name));
     m_name->setToolTip(name);
+    m_renameButton->setVisible(!isRenaming());
     m_details->setText(details);
+    m_details->setToolTip(QString());
+    show();
+}
+
+void ImageInfoBar::showLiveChannel(const QString& name, const QString& details) {
+    cancelRename();
+    m_shownId.reset();
+    m_shownName = name;
+    m_name->setText(singleLine(name));
+    m_name->setToolTip(name);
+    m_renameButton->hide();
+    m_details->setText(details);
+    m_details->setToolTip(tr("Frames arrived and drawn in the last second, frames dropped while the viewer "
+                             "was busy, and the frame's age: the time it arrived minus the time the sender "
+                             "stamped on it, which means something only when both run on one computer."));
     show();
 }
 

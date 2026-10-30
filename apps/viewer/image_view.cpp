@@ -63,7 +63,8 @@ void ImageView::paintEvent(QPaintEvent*) {
     if (m_image.isNull()) {
         painter.setPen(palette().color(QPalette::WindowText));
         painter.drawText(rect(), Qt::AlignCenter,
-                         tr("No image yet.\nSend one with visual_debug::sendImage(), or use File → Open…"));
+                         tr("No image yet.\nSend one with visual_debug::sendImage(), stream frames with "
+                            "visual_debug::sendLive(), or use File → Open…"));
         return;
     }
     const cv::Rect2d source = m_viewport.visibleImageRect();

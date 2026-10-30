@@ -2,6 +2,7 @@
 
 #include "viewer_core/display_converter.h"
 #include "viewer_core/image_history.h"
+#include "viewer_core/live_channels.h"
 
 #include <QDate>
 #include <QDateTime>
@@ -12,11 +13,14 @@
 #include <QString>
 #include <QTest>
 #include <QTime>
+#include <QToolButton>
 
 #include <gtest/gtest.h>
 #include <opencv2/core.hpp>
 
+#include <chrono>
 #include <cstdint>
+#include <optional>
 
 namespace {
 
@@ -64,6 +68,35 @@ TEST(ImageInfoBar, ClockTimeIsLocalToTheSecond) {
     const QDateTime local(QDate(2026, 10, 27), QTime(14, 5, 9, 999));
 
     EXPECT_EQ(clockTime(local.toMSecsSinceEpoch() * 1000 + 999), QStringLiteral("14:05:09"));
+}
+
+TEST(ImageInfoBar, LiveDetailsShowStateRatesDropsAndAge) {
+    using namespace std::chrono_literals;
+    const QString summary = QString::fromUtf8("1920×1080 · 3 ch · 8U");
+    viewer_core::LiveChannel channel;
+    channel.dropped = 12;
+    const viewer_core::LiveStats stats{.arrivedPerSecond = 30, .drawnPerSecond = 29, .age = 18ms};
+
+    EXPECT_EQ(liveDetails(summary, channel, stats),
+              QString::fromUtf8("live · 1920×1080 · 3 ch · 8U · 30 fps in · 29 drawn · 12 dropped · 18 ms"));
+    channel.idle = true;
+    EXPECT_EQ(
+        liveDetails(summary, channel, {.arrivedPerSecond = 0, .drawnPerSecond = 0, .age = std::nullopt}),
+        QString::fromUtf8("idle · 1920×1080 · 3 ch · 8U · 0 fps in · 0 drawn · 12 dropped"));
+    channel.frozen = true; // frozen says so even when idle
+    EXPECT_TRUE(liveDetails(summary, channel, stats).startsWith(QStringLiteral("frozen · ")));
+}
+
+TEST_F(ImageInfoBarTest, LiveChannelHasNoPencil) {
+    m_bar.showLiveChannel(QStringLiteral("camera"), QStringLiteral("live · 4×3 · 1 ch · 8U"));
+
+    EXPECT_EQ(nameLabel()->text(), QStringLiteral("camera"));
+    EXPECT_FALSE(m_bar.findChild<QToolButton*>(QStringLiteral("renameButton"))->isVisible());
+    m_bar.startRename();
+    EXPECT_FALSE(m_bar.isRenaming());
+
+    m_bar.showImage(7, QStringLiteral("old name"), QStringLiteral("4×3 · 1 ch · 8U · 12 bytes"));
+    EXPECT_TRUE(m_bar.findChild<QToolButton*>(QStringLiteral("renameButton"))->isVisible());
 }
 
 TEST_F(ImageInfoBarTest, EnterEmitsRename) {

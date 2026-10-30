@@ -23,6 +23,8 @@ public:
     explicit ImageInfoBar(QWidget* parent = nullptr);
 
     void showImage(viewer_core::ImageId id, const QString& name, const QString& details);
+    // A live channel has no pencil: its name is the sender's. Ends a rename.
+    void showLiveChannel(const QString& name, const QString& details);
     void clear();
     DisplaySettingsControl* displayControl() const;
 

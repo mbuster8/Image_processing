@@ -17,6 +17,22 @@ QString imageDetails(const viewer_core::ReceivedImage& image, const QLocale& loc
     return QStringLiteral("%1 · %2").arg(summary, size(image.pixelDataBytes()));
 }
 
+QString liveDetails(const QString& summary, const viewer_core::LiveChannel& channel,
+                    const viewer_core::LiveStats& stats) {
+    const QString state = channel.frozen ? QCoreApplication::translate("ImageInfoBar", "frozen")
+                          : channel.idle ? QCoreApplication::translate("ImageInfoBar", "idle")
+                                         : QCoreApplication::translate("ImageInfoBar", "live");
+    QString text = QCoreApplication::translate("ImageInfoBar", "%1 · %2 · %3 fps in · %4 drawn · %5 dropped")
+                       .arg(state, summary)
+                       .arg(stats.arrivedPerSecond)
+                       .arg(stats.drawnPerSecond)
+                       .arg(channel.dropped);
+    if (stats.age) {
+        text += QCoreApplication::translate("ImageInfoBar", " · %1 ms").arg(stats.age->count());
+    }
+    return text;
+}
+
 QString clockTime(qint64 epochMicroseconds) {
     return QDateTime::fromMSecsSinceEpoch(epochMicroseconds / 1000).toString(QStringLiteral("HH:mm:ss"));
 }

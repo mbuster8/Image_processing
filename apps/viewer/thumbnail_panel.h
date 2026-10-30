@@ -40,6 +40,9 @@ public:
     // listed; an image the search hides is still remembered, and selected again once listed.
     bool selectImage(viewer_core::ImageId id);
     std::optional<viewer_core::ImageId> currentImageId() const;
+    // Quietly selects nothing and forgets the remembered image, so choosing any thumbnail afterwards, the one
+    // chosen before included, emits imageSelected. For while the window shows something else.
+    void clearChoice();
     bool isListed(viewer_core::ImageId id) const;
     std::vector<viewer_core::ImageId> listedIds() const; // top to bottom, as shown
     int listedCount() const;

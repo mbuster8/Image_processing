@@ -83,6 +83,11 @@ std::optional<viewer_core::ImageId> ThumbnailPanel::currentImageId() const {
     return current.isValid() ? std::optional(idOf(current)) : std::nullopt;
 }
 
+void ThumbnailPanel::clearChoice() {
+    m_selectedId.reset();
+    restoreSelection();
+}
+
 bool ThumbnailPanel::isListed(viewer_core::ImageId id) const { return viewIndexOf(id).isValid(); }
 
 std::vector<viewer_core::ImageId> ThumbnailPanel::listedIds() const {

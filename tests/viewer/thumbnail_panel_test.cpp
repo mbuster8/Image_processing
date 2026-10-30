@@ -125,6 +125,26 @@ TEST(ThumbnailPanel, SelectingAnItemReportsItsId) {
     EXPECT_EQ(selected.first().at(0).value<quint64>(), 1u);
 }
 
+// The window clears the choice while a live channel is shown, so a click on the image shown before it, or any
+// other, shows that image again.
+TEST(ThumbnailPanel, ClearChoiceLetsTheSameThumbnailBeChosenAgain) {
+    ThumbnailPanel panel;
+    panel.addImage(makeEntry(1, "a"));
+    QSignalSpy selected(&panel, &ThumbnailPanel::imageSelected);
+
+    panel.clearChoice();
+    EXPECT_TRUE(selected.isEmpty());
+    EXPECT_EQ(panel.currentImageId(), std::nullopt);
+    EXPECT_TRUE(panel.selectionModel()->selectedIndexes().isEmpty());
+    panel.addImage(makeEntry(2, "b"), false); // a change of the listing chooses nothing either
+    EXPECT_EQ(panel.currentImageId(), std::nullopt);
+
+    panel.setCurrentIndex(panel.model()->index(1, 0)); // "a", below the newer "b"
+
+    ASSERT_EQ(selected.size(), 1);
+    EXPECT_EQ(selected.first().at(0).value<quint64>(), 1u);
+}
+
 TEST(ThumbnailPanel, RemovesEvictedImage) {
     ThumbnailPanel panel;
     panel.addImage(makeEntry(1, "a"));

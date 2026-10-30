@@ -10,4 +10,8 @@ namespace qt_common {
 // stays valid after the Mat changes or goes away. Throws std::invalid_argument for any other type.
 QImage toQImage(const cv::Mat& rgba);
 
+// The same pixels without a copy, for a picture drawn many times a second: the QImage holds a reference to
+// the Mat's data until it and its copies are gone. Throws std::invalid_argument for anything but CV_8UC4.
+QImage wrapAsQImage(cv::Mat rgba);
+
 } // namespace qt_common
