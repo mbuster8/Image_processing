@@ -174,6 +174,15 @@ cv::Mat edgesOf(const cv::Mat& frame) {
     return edges;
 }
 
+FramePacer::FramePacer(Clock::duration interval, Clock::time_point start)
+    : m_interval(interval), m_due(start) {}
+
+FramePacer::Clock::time_point FramePacer::due() const { return m_due; }
+
+void FramePacer::sent(Clock::time_point now) {
+    m_due = now - m_due < m_interval ? m_due + m_interval : now + m_interval;
+}
+
 Tally run(const std::function<std::optional<cv::Mat>()>& next, visual_debug::ImageSender& sender,
           std::optional<int> frames, const std::function<bool()>& waitAndContinue) {
     Tally tally;

@@ -739,6 +739,10 @@ void MainWindow::takeLiveFrames() {
 
     for (QtImageSink::LiveFrame& frame : batch.frames) {
         const std::string name = frame.message.name;
+        const viewer_core::LiveChannel* before = m_live.find(name);
+        const std::pair<std::uint64_t, std::uint64_t> countsBefore =
+            before != nullptr ? std::pair{before->received + before->dropped, before->dropped}
+                              : std::pair<std::uint64_t, std::uint64_t>{};
         const viewer_core::LiveChannels::ReceiveResult result =
             m_live.receive({.channel = name,
                             .image = std::move(frame.message.image),
@@ -748,6 +752,7 @@ void MainWindow::takeLiveFrames() {
                            now);
         if (result.started) {
             log(LogKind::Info, tr("Live channel [%1] started").arg(singleLine(QString::fromStdString(name))));
+            m_startCounts[name] = countsBefore;
             m_refusedChannels.erase(name);
             panel->addChannel(QString::fromStdString(name));
             updateLiveRow(*m_live.find(name), now);
@@ -820,10 +825,11 @@ void MainWindow::showLiveText(Clock::time_point now) {
 void MainWindow::tick(Clock::time_point now) {
     for (const std::string& name : m_live.updateIdle(now)) {
         const viewer_core::LiveChannel* channel = m_live.find(name);
+        const auto [arrivedBefore, droppedBefore] = m_startCounts[name];
         log(LogKind::Info, tr("Live channel [%1] idle after %2 frames (%3 dropped)")
                                .arg(singleLine(QString::fromStdString(name)))
-                               .arg(channel->received + channel->dropped)
-                               .arg(channel->dropped));
+                               .arg(channel->received + channel->dropped - arrivedBefore)
+                               .arg(channel->dropped - droppedBefore));
     }
     for (const viewer_core::LiveChannel& channel : m_live.channels()) {
         updateLiveRow(channel, now);
@@ -872,6 +878,7 @@ void MainWindow::closeLiveChannel(const std::string& name) {
 void MainWindow::forgetLiveChannel(const std::string& name) {
     m_live.close(name);
     m_rowPictures.erase(name);
+    m_startCounts.erase(name);
     m_sidebar->liveChannels()->removeChannel(QString::fromStdString(name));
     if (m_liveChannel != name) {
         return;

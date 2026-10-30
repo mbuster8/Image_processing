@@ -4,6 +4,7 @@
 
 #include <opencv2/core/mat.hpp>
 
+#include <chrono>
 #include <functional>
 #include <map>
 #include <optional>
@@ -49,6 +50,23 @@ cv::Mat patternFrame(int index, cv::Size size);
 
 // The Canny edges (thresholds 50 and 150) of an 8-bit greyscale, BGR or BGRA frame: CV_8UC1, the same size.
 cv::Mat edgesOf(const cv::Mat& frame);
+
+// When each frame is due: one interval after the previous one was due, so a timer that wakes a little late
+// every time does not slow the stream down. After a real stall (a frame sent a whole interval late or more)
+// the schedule starts again from then, so a slow send delays the stream instead of making it rush to catch
+// up.
+class FramePacer {
+public:
+    using Clock = std::chrono::steady_clock;
+
+    FramePacer(Clock::duration interval, Clock::time_point start);
+    Clock::time_point due() const;
+    void sent(Clock::time_point now); // the frame that was due went out at `now`
+
+private:
+    Clock::duration m_interval;
+    Clock::time_point m_due;
+};
 
 struct ChannelTally {
     int sent = 0;

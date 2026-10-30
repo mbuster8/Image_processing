@@ -234,6 +234,32 @@ TEST(LiveSender, CountsFailuresByResult) {
     EXPECT_EQ(tally.edges.failed, (std::map<SendResult, int>{{SendResult::ViewerUnavailable, 4}}));
 }
 
+// A timer wakes a little late every time; the stream must still keep its rate, not lose the lateness each
+// frame.
+TEST(LiveSender, PacingDoesNotDriftWithLateWakeUps) {
+    using Clock = live_sender::FramePacer::Clock;
+    const Clock::time_point start{};
+    live_sender::FramePacer pacer(10ms, start);
+    EXPECT_EQ(pacer.due(), start);
+
+    for (int frame = 0; frame < 100; ++frame) {
+        pacer.sent(pacer.due() + 2ms);
+    }
+
+    EXPECT_EQ(pacer.due(), start + 1000ms);
+}
+
+// After a real stall the schedule starts again from now, so the stream does not rush to catch up.
+TEST(LiveSender, PacingStartsAgainAfterAStall) {
+    using Clock = live_sender::FramePacer::Clock;
+    const Clock::time_point start{};
+    live_sender::FramePacer pacer(10ms, start);
+
+    pacer.sent(start + 50ms);
+
+    EXPECT_EQ(pacer.due(), start + 60ms);
+}
+
 TEST(LiveSender, DeliversThirtyFramesPerChannelToAServer) {
     test_support::CollectingSink sink;
     visual_debug::Server server(sink, {.endpoint = "tcp://127.0.0.1:*"});

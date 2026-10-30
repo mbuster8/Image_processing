@@ -173,6 +173,8 @@ private:
     // for a newer frame.
     std::map<std::string, std::pair<std::uint64_t, QImage>> m_rowPictures;
     std::set<std::string> m_refusedChannels; // logged once each, until the name starts a channel
+    // Each channel's arrived and dropped totals when it last started, so its idle line counts that stretch.
+    std::map<std::string, std::pair<std::uint64_t, std::uint64_t>> m_startCounts;
     QTimer* m_liveTimer = nullptr;
     QTimer* m_rejectionTimer = nullptr; // running for a second after a rejection line
     int m_pausedRejections = 0;

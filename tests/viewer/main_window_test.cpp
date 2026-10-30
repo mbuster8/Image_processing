@@ -1684,6 +1684,31 @@ TEST(MainWindowTest, GoesIdleInTheWindow) {
         QStringLiteral("live"));
 }
 
+// Each "started" line has its own "idle after" line, counting the frames since it.
+TEST(MainWindowTest, IdleLineCountsTheFramesSinceItStarted) {
+    ClockedWindow clocked;
+    MainWindow& window = *clocked.window;
+    for (int i = 0; i < 3; ++i) {
+        feedLive(window, "camera", liveFrame(i));
+    }
+    QApplication::processEvents();
+    clocked.now += 6s;
+    window.tick(clocked.now);
+
+    for (int i = 0; i < 2; ++i) {
+        feedLive(window, "camera", liveFrame(i));
+        QApplication::processEvents();
+    }
+    clocked.now += 6s;
+    window.tick(clocked.now);
+
+    const ActivityLog* log = logOf(window);
+    EXPECT_NE(findEntry(*log, QStringLiteral("Live channel [camera] idle after 3 frames (2 dropped)")),
+              nullptr);
+    EXPECT_NE(findEntry(*log, QStringLiteral("Live channel [camera] idle after 2 frames (0 dropped)")),
+              nullptr);
+}
+
 TEST(MainWindowTest, NinthChannelIsLoggedOncePerName) {
     const auto window = makeTestWindow();
     for (int i = 1; i <= 8; ++i) {

@@ -1,8 +1,9 @@
 // Streams frames to the viewer as live channels: each frame as "camera", its Canny edges as "edges". The
 // program has no window of its own: the viewer is its screen, with Freeze, Snapshot and the display range.
 //
-//     live_sender [--camera N | <video file> | --pattern [--size WxH] [--fps N]] [--frames N] [--endpoint
-//     <uri>] live_sender --list-cameras
+//     live_sender [--camera N | <video file> | --pattern [--size WxH] [--fps N]] [--frames N]
+//                 [--endpoint <uri>]
+//     live_sender --list-cameras
 //
 // Without a source it reads camera 0. A camera runs until Ctrl+C and a file until its end, unless --frames
 // stops them sooner; a summary prints either way. A file is sent at its own frame rate, the pattern at
@@ -139,16 +140,17 @@ int main(int argc, char* argv[]) {
         };
     }
 
-    // Each frame is due one interval after the previous one, or straight away if sending fell behind: a slow
-    // send delays the stream instead of making it rush to catch up.
-    Clock::time_point due = Clock::now();
-    const auto waitAndContinue = [&interval, &due] {
-        if (interval) {
-            while (!stopRequested && Clock::now() < due) {
+    std::optional<live_sender::FramePacer> pacer;
+    if (interval) {
+        pacer.emplace(*interval, Clock::now());
+    }
+    const auto waitAndContinue = [&pacer] {
+        if (pacer) {
+            while (!stopRequested && Clock::now() < pacer->due()) {
                 std::this_thread::sleep_for(
-                    std::min<Clock::duration>(due - Clock::now(), kStopCheckInterval));
+                    std::min<Clock::duration>(pacer->due() - Clock::now(), kStopCheckInterval));
             }
-            due = std::max(due, Clock::now()) + *interval;
+            pacer->sent(Clock::now());
         }
         return !stopRequested;
     };
